@@ -1,0 +1,39 @@
+--track0:サイズ(連動),1,1000,100,1
+--track1:ライン幅(連動),0,1000,10,1
+--track2:透明度(連動),0,100,0
+--track3:モード,0,1,0,1
+--dialog:出目色/col,col3=0x000000;
+s1=obj.track0
+h=math.min( s1/2, obj.track1/4 )
+s2=s1-h*2
+a=(100-obj.track2)/100
+mode=obj.track3
+require("SharbetUtil")
+
+obj.load("figure","円",col3,s2/3)
+obj.alpha=a
+l=s1/2
+
+if(mode==0) then
+local lm=s2/3*0.8
+local lt=s2*3/9
+drawmark(obj,-lt,-l,-lt,5,lm,lm)
+drawmark(obj,lt,-l,-lt,5,lm,lm)
+drawmark(obj,0,-l,0,5,lm,lm)
+drawmark(obj,-lt,-l,lt,5,lm,lm)
+drawmark(obj,lt,-l,lt,5,lm,lm)
+elseif(mode==1) then
+local lm=s2/6
+local lt=s2/5
+--line
+drawmark(obj,0,-l,-lt*2,5,lm,lm)
+drawmark(obj,0,-l,-lt,5,lm,lm)
+drawmark(obj,0,-l,0,5,lm,lm)
+drawmark(obj,0,-l,lt,5,lm,lm)
+drawmark(obj,0,-l,lt*2,5,lm,lm)
+--point
+drawmark(obj,-lt,-l,-lt,5,lm,lm)
+drawmark(obj,-lt*2,-l,0,5,lm,lm)
+drawmark(obj,lt,-l,-lt,5,lm,lm)
+drawmark(obj,lt*2,-l,0,5,lm,lm)
+end
