@@ -1,0 +1,790 @@
+@通常
+--track@ocr_t0:長さ,0,10000,300
+--track@ocr_t1:Z内角,-360,360,0
+--track@ocr_t2:Y内角,-360,360,0
+--track@ocr_t3:ねじれ,-180,180,0
+--value@BN:分割数,20
+--color@colA:色A,0x000000
+--color@colB:色B,0x000000
+--value@size:手size,30
+--track@bwt:太さ,0,500,7,1
+--check@maru:両端を丸める,0
+--value@CHA:描画方法(0-4),0
+--value@SEC:内部,0
+--check@ocr_useBoneP:ボーン制御P,0
+--track@p_numP:P親番号,1,100,1,1
+
+if ocr_useBoneP==1 then
+require("rikky_parent_control")
+require("OCRUtil")
+end
+
+weight=bwt/math.sqrt(2)
+l=math.floor(weight)/2
+-- check.
+  XX={}
+  YY={}
+  ZZ={}
+  TW={}
+  XX[0]=0
+  YY[0]=0
+  ZZ[0]=0
+  TW[0]=0
+  XX[1]=ocr_t0/2
+  YY[1]=0
+  ZZ[1]=0
+  TW[1]=ocr_t3/2
+  XX[2]=ocr_t0/2
+  YY[2]=ocr_t1
+  ZZ[2]=ocr_t2
+  TW[2]=ocr_t3/2-ocr_t2
+  NN=2
+-- 関数共通
+function PassXYZ(s) -- s<=1
+  Ns=NN*s
+  Ns1=math.floor(Ns)
+  Ns2=(Ns-Ns1)/2
+
+  if Ns1<=0 then
+    nx=Ax[1]*Ns2*Ns2+Bx[1]*Ns2+Cx[1]
+    ny=Ay[1]*Ns2*Ns2+By[1]*Ns2+Cy[1]
+    nz=Az[1]*Ns2*Ns2+Bz[1]*Ns2+Cz[1]
+    nt=At[1]*Ns2*Ns2+Bt[1]*Ns2+Ct[1]
+  elseif Ns1==NN-1 then
+    SS1=Ns2+0.5
+    nx=Ax[Ns1]*SS1*SS1+Bx[Ns1]*SS1+Cx[Ns1]
+    ny=Ay[Ns1]*SS1*SS1+By[Ns1]*SS1+Cy[Ns1]
+    nz=Az[Ns1]*SS1*SS1+Bz[Ns1]*SS1+Cz[Ns1]
+    nt=At[Ns1]*SS1*SS1+Bt[Ns1]*SS1+Ct[Ns1]
+   elseif s==1 then
+    nx=XX[NN]
+    ny=YY[NN]
+    nz=ZZ[NN]
+    nt=TW[NN]
+  else
+    SS1=Ns2+0.5
+    SS2=Ns2
+    RS=2*Ns2
+    nx=(Ax[Ns1]*SS1*SS1+Bx[Ns1]*SS1+Cx[Ns1])*(1-RS)+RS*(Ax[Ns1+1]*SS2*SS2+Bx[Ns1+1]*SS2+Cx[Ns1+1])
+    ny=(Ay[Ns1]*SS1*SS1+By[Ns1]*SS1+Cy[Ns1])*(1-RS)+RS*(Ay[Ns1+1]*SS2*SS2+By[Ns1+1]*SS2+Cy[Ns1+1])
+    nz=(Az[Ns1]*SS1*SS1+Bz[Ns1]*SS1+Cz[Ns1])*(1-RS)+RS*(Az[Ns1+1]*SS2*SS2+Bz[Ns1+1]*SS2+Cz[Ns1+1])
+    nt=(At[Ns1]*SS1*SS1+Bt[Ns1]*SS1+Ct[Ns1])*(1-RS)+RS*(At[Ns1+1]*SS2*SS2+Bt[Ns1+1]*SS2+Ct[Ns1+1])
+  end
+  return nx,ny,nz,nt
+end
+
+function ShiftR(iax,iay,iaz,ir)
+  abs=(iax*iax+iay*iay)^0.5
+  ibx,iby=iay/abs,-iax/abs
+  icx,icy,icz=iax*iaz,iay*iaz,-iax*iax-iay*iay
+  abs=(icx*icx+icy*icy+icz*icz)^0.5
+  icx,icy,icz=icx/abs,icy/abs,icz/abs
+  mc=math.cos(ir/180*math.pi)  
+  ms=math.sin(ir/180*math.pi)
+  return obj.w*(ibx*mc+icx*ms)/2,obj.w*(iby*mc+icy*ms)/2,obj.w*(icz*ms)/2
+end
+
+  for i=1,NN do
+    s1=YY[i]*math.pi/180
+    s2=(ZZ[i]+90)*math.pi/180
+    XX[i],YY[i],ZZ[i]=XX[i]*math.sin(s1)*math.sin(s2),-XX[i]*math.cos(s1),-XX[i]*math.sin(s1)*math.cos(s2)
+  end
+
+-- --------以降共通
+  for i=1,NN do
+    XX[i]=XX[i-1]+XX[i]
+    YY[i]=YY[i-1]+YY[i]
+    ZZ[i]=ZZ[i-1]+ZZ[i]
+  end
+
+  OFH=(1+obj.frame)/(1+obj.totalframe)
+debug_print(string.format("OFH = %d, NN = %d, BN = %d",OFH,NN,BN))
+
+  Ax={};Bx={};Cx={};
+  Ay={};By={};Cy={};
+  Az={};Bz={};Cz={};
+  At={};Bt={};Ct={};
+
+  for M=1,NN-1 do
+    Ax[M]=2*XX[M-1]-4*XX[M]+2*XX[M+1]
+    Bx[M]=-3*XX[M-1]+4*XX[M]-XX[M+1] 
+    Cx[M]=XX[M-1]
+    Ay[M]=2*YY[M-1]-4*YY[M]+2*YY[M+1]
+    By[M]=-3*YY[M-1]+4*YY[M]-YY[M+1] 
+    Cy[M]=YY[M-1]
+    Az[M]=2*ZZ[M-1]-4*ZZ[M]+2*ZZ[M+1]
+    Bz[M]=-3*ZZ[M-1]+4*ZZ[M]-ZZ[M+1] 
+    Cz[M]=ZZ[M-1]
+    At[M]=2*TW[M-1]-4*TW[M]+2*TW[M+1]
+    Bt[M]=-3*TW[M-1]+4*TW[M]-TW[M+1] 
+    Ct[M]=TW[M-1]
+  end
+
+  if CHA==0 then
+    Nmax=NN*BN
+    Nv=Nmax
+    Ama=0
+  elseif CHA==1 then
+    Nmax=math.floor(NN*BN*OFH)
+    Nv=NN*BN
+    Ama=NN*BN*OFH-Nmax
+  elseif CHA==2 then
+    Nmax=math.floor(NN*BN*OFH)
+    Nv=Nmax
+    Ama=NN*BN*OFH-Nmax
+  elseif CHA==3 then 
+    Nmax=math.floor(NN*BN*OFH)
+  else
+    Nmax=NN*BN
+  end
+  Nhalf=math.floor(Nmax/2)
+
+--ライン描画
+ocr_fastdraw={}
+obj.load("figure","四角形",colA,l*8)
+obj.effect()
+
+if CHA<3 then
+  xf,yf,zf,tf = PassXYZ(0)
+  ix,iy,iz,it =PassXYZ(0.5/(NN*BN))
+  dx,dy,dz= ShiftR(ix-xf,iy-yf,iz-zf,TW[0])
+  x1,y1,z1 = xf+dx,yf+dy,zf+dz
+  x0,y0,z0 = xf-dx,yf-dy,zf-dz
+    for i=1,Nhalf do
+      ix,iy,iz,it =PassXYZ(i/(NN*BN))
+      dx,dy,dz= ShiftR(ix-xf,iy-yf,iz-zf,it)
+      x2,y2,z2=ix+dx,iy+dy,iz+dz
+      x3,y3,z3=ix-dx,iy-dy,iz-dz
+      v1=obj.h*(1-(i)/(Nv+Ama))
+      v2=obj.h*(1-(i-1)/(Nv+Ama))
+      if SEC==1 then
+      table.insert(ocr_fastdraw,{y0,z0,x0, y1,z1,x1, y2,z2,x2, y3,z3,x3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+      elseif SEC==2 then
+      table.insert(ocr_fastdraw,{z0,y0,x0, z1,y1,x1, z2,y2,x2, z3,y3,x3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+      else
+      table.insert(ocr_fastdraw,{x0,y0,z0, x1,y1,z1, x2,y2,z2, x3,y3,z3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+      end
+      x0,y0,z0=x3,y3,z3
+      x1,y1,z1=x2,y2,z2
+      xf,yf,zf=ix,iy,iz
+    end -- i
+  if Ama>0 then
+    ix,iy,iz,it =PassXYZ((Nmax+Ama)/(NN*BN))
+    dx,dy,dz= ShiftR(ix-xf,iy-yf,iz-zf,it)
+    x2,y2,z2=ix+dx,iy+dy,iz+dz
+    x3,y3,z3=ix-dx,iy-dy,iz-dz
+    v1=obj.h*(1-(Nmax+Ama)/(Nv+Ama))
+    v2=obj.h*(1-Nmax/(Nv+Ama))
+    if SEC==1 then
+    table.insert(ocr_fastdraw,{y0,z0,x0, y1,z1,x1, y2,z2,x2, y3,z3,x3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+    elseif SEC==2 then
+    table.insert(ocr_fastdraw,{z0,y0,x0, z1,y1,x1, z2,y2,x2, z3,y3,x3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+    else
+    table.insert(ocr_fastdraw,{x0,y0,z0, x1,y1,z1, x2,y2,z2, x3,y3,z3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+    end
+  end
+  obj.drawpoly(ocr_fastdraw)
+else -- cha<3
+  for i=0,Nhalf do
+    obj.ox , obj.oy , obj.oz ,NL =PassXYZ(i/(NN*BN))
+    obj.draw()
+  end
+end
+
+ocr_fastdraw={}
+obj.load("figure","四角形",colB,l*8)
+obj.effect()
+
+if CHA<3 then
+    for i=Nhalf+1,Nmax do
+      ix,iy,iz,it =PassXYZ(i/(NN*BN))
+      dx,dy,dz= ShiftR(ix-xf,iy-yf,iz-zf,it)
+      x2,y2,z2=ix+dx,iy+dy,iz+dz
+      x3,y3,z3=ix-dx,iy-dy,iz-dz
+      v1=obj.h*(1-(i)/(Nv+Ama))
+      v2=obj.h*(1-(i-1)/(Nv+Ama))
+      if SEC==1 then
+    table.insert(ocr_fastdraw,{y0,z0,x0, y1,z1,x1, y2,z2,x2, y3,z3,x3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+      elseif SEC==2 then
+    table.insert(ocr_fastdraw,{z0,y0,x0, z1,y1,x1, z2,y2,x2, z3,y3,x3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+      else
+    table.insert(ocr_fastdraw,{x0,y0,z0, x1,y1,z1, x2,y2,z2, x3,y3,z3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+      end
+      x0,y0,z0=x3,y3,z3
+      x1,y1,z1=x2,y2,z2
+      xf,yf,zf=ix,iy,iz
+    end -- i
+  if Ama>0 then
+    ix,iy,iz,it =PassXYZ((Nmax+Ama)/(NN*BN))
+    dx,dy,dz= ShiftR(ix-xf,iy-yf,iz-zf,it)
+    x2,y2,z2=ix+dx,iy+dy,iz+dz
+    x3,y3,z3=ix-dx,iy-dy,iz-dz
+    v1=obj.h*(1-(Nmax+Ama)/(Nv+Ama))
+    v2=obj.h*(1-Nmax/(Nv+Ama))
+    if SEC==1 then
+    table.insert(ocr_fastdraw,{y0,z0,x0, y1,z1,x1, y2,z2,x2, y3,z3,x3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+    elseif SEC==2 then
+    table.insert(ocr_fastdraw,{z0,y0,x0, z1,y1,x1, z2,y2,x2, z3,y3,x3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+    else
+    table.insert(ocr_fastdraw,{x0,y0,z0, x1,y1,z1, x2,y2,z2, x3,y3,z3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+    end
+  end
+  obj.drawpoly(ocr_fastdraw)
+else -- cha<3
+  for i=Nhalf+1,Nmax do
+    obj.ox , obj.oy , obj.oz ,NL =PassXYZ(i/(NN*BN))
+    obj.draw()
+  end
+end
+
+--頂点の描画
+if maru==1 then
+ocr_fastdraw={}
+  obj.load("figure","円",colA,l*8)
+  obj.effect()
+
+  cw=l*4
+  for i=0,1 do
+    ix,iy,iz,it =PassXYZ(i/NN)
+    if SEC==1 then
+    table.insert(ocr_fastdraw,{iy+cw,iz,ix+cw, iy+cw,iz,ix-cw, iy-cw,iz,ix-cw, iy-cw,iz,ix+cw, 0,0, obj.w,0, obj.w,obj.h, 0,obj.h})
+    elseif SEC==2 then
+    table.insert(ocr_fastdraw,{iz,iy+cw,ix+cw, iz,iy+cw,ix-cw, iz,iy-cw,ix-cw, iz,iy-cw,ix+cw, 0,0, obj.w,0, obj.w,obj.h, 0,obj.h})
+    else
+    table.insert(ocr_fastdraw,{ix+cw,iy+cw,iz, ix-cw,iy+cw,iz, ix-cw,iy-cw,iz, ix+cw,iy-cw,iz, 0,0, obj.w,0, obj.w,obj.h, 0,obj.h})
+    end
+  end -- i
+  obj.drawpoly(ocr_fastdraw)
+end
+	OCRNextx,OCRNexty,OCRNextz,OCRNext = 0, 0, 0,1
+        ix,iy,iz,it =PassXYZ(1)
+    if SEC==1 then
+    OCRNextx,OCRNexty,OCRNextz = iy, iz, ix
+    elseif SEC==2 then
+    OCRNextx,OCRNexty,OCRNextz = iz, iy, ix
+    else
+    OCRNextx,OCRNexty,OCRNextz = ix, iy, iz
+    end
+debug_print(string.format("OCRNextx = %d, OCRNexty = %d, OCRNextz = %d",OCRNextx,OCRNexty,OCRNextz))
+
+-- ---------ここから違う
+--先端描画
+obj.load("figure","円",colB,size*4)
+obj.effect()
+
+  if NN*BN*OFH<=1/2 then
+    inm=1/2
+  else
+    inm=NN*BN*OFH
+  end
+
+  if CHA==0 then inm=NN*BN end
+  
+debug_print(string.format("inm = %d, NN = %d, BN = %d",inm,NN,BN))
+
+  xf,yf,zf,tf = PassXYZ((inm-1/2)/(NN*BN))
+  ix,iy,iz,it = PassXYZ(inm/(NN*BN))
+
+  dx,dy,dz=ix-xf,iy-yf,iz-zf
+  kika=obj.h/(dx*dx+dy*dy+dz*dz)^0.5/2
+  dx,dy,dz=dx*kika,dy*kika,dz*kika
+
+  xf,yf,zf=ix-dx,iy-dy,iz-dz
+  ix,iy,iz=ix+dx,iy+dy,iz+dz
+  dx,dy,dz= ShiftR(dx,dy,dz,it)
+
+  x3,y3,z3 = xf-dx,yf-dy,zf-dz
+  x2,y2,z2 = xf+dx,yf+dy,zf+dz
+  x1,y1,z1 = ix+dx,iy+dy,iz+dz
+  x0,y0,z0 = ix-dx,iy-dy,iz-dz
+  if SEC==1 then
+    obj.drawpoly(y0,z0,x0, y1,z1,x1, y2,z2,x2, y3,z3,x3, 0,0, obj.w,0, obj.w,obj.h, 0,obj.h)
+  elseif SEC==2 then
+    obj.drawpoly(z0,y0,x0, z1,y1,x1, z2,y2,x2, z3,y3,x3, 0,0, obj.w,0, obj.w,obj.h, 0,obj.h)
+  else
+    obj.drawpoly(x0,y0,z0, x1,y1,z1, x2,y2,z2, x3,y3,z3, 0,0, obj.w,0, obj.w,obj.h, 0,obj.h)
+  end
+if ocr_useBoneP==1 then
+local OCRDx,OCRDy,OCRDz,OCRsrx,OCRsry,OCRsrz
+	local OCRNx,OCRNy,OCRNz,OCRNext = 0, 0, 0,1
+        ix,iy,iz,it =PassXYZ(1)
+    if SEC==1 then
+    OCRNx,OCRNy,OCRNz = iy, iz, ix
+    elseif SEC==2 then
+    OCRNx,OCRNy,OCRNz = iz, iy, ix
+    else
+    OCRNx,OCRNy,OCRNz = ix, iy, iz
+    end
+  OCRsrx,OCRsry,OCRsrz = obj.rx,obj.ry,obj.rz
+  if OCRsrx==nil then OCRsrx = 0 end
+  if OCRsry==nil then OCRsry = 0 end
+  if OCRsrz==nil then OCRsrz = 0 end
+  
+   OCRDx=math.rad(OCRsrx)
+   OCRDy=math.rad(OCRsry)
+   OCRDz=math.rad(OCRsrz)
+    OCRNextx,OCRNexty,OCRNextz=OCRRoll(OCRNx,OCRNy,OCRNz,OCRDx,OCRDy,OCRDz)
+--必要な情報は位置三方向、角度三方向、拡大率、透明度
+
+--位置はAviUtlの画面に対して絶対的な位置をコピーするのでトラックバーと相対的位置の和になります
+r_parent_info[p_numP].x = obj.getvalue("x") + OCRNextx
+r_parent_info[p_numP].y = obj.getvalue("y") + OCRNexty
+r_parent_info[p_numP].z = obj.getvalue("z") + OCRNextz
+
+--角度はすでにトラックバーの値が含まれているのでそのままです
+r_parent_info[p_numP].rx = obj.rx
+r_parent_info[p_numP].ry = obj.ry
+r_parent_info[p_numP].rz = obj.rz
+
+--拡大率はトラックバーの値そのままが出てくるので100で割ります
+r_parent_info[p_numP].zoom = obj.zoom * obj.getvalue("zoom") * 0.01
+
+--拡大率と透明度は足すのではなくかけて値をコピーします
+r_parent_info[p_numP].alpha = obj.alpha * obj.getvalue("alpha")
+--end
+end
+
+@Cあり
+--track@ocr_t0:長さ,0,10000,300
+--track@ocr_t1:Z内角,-360,360,0
+--track@ocr_t2:Y内角,-360,360,0
+--track@ocr_t3:ねじれ,-180,180,0
+--value@BN:分割数,20
+--color@colA:色A,0x000000
+--color@colB:色B,0x000000
+--value@size:手size,30
+--track@bwt:太さ,0,500,7,1
+--check@maru:両端を丸める,0
+--value@CHA:描画方法(0-4),0
+--value@SEC:内部,0
+--track@p_num:C親番号,1,100,1,1
+--value@arm_Cinfo:情報保存,nil;
+--check@ocr_useBoneP:ボーン制御P,0
+--track@p_numP:P親番号,1,100,1,1
+
+require("rikky_parent_control")
+if ocr_useBoneP==1 then
+require("OCRUtil")
+end
+arm_Cinfo = r_parent_info[math.ceil(p_num)]
+if(arm_Cinfo == nil) then
+	debug_print("info is null")
+
+local arm_ox,arm_oy,arm_oz,arm_rx,arm_ry,arm_rz,arm_zoom,arm_alpha
+
+--各情報をローカル変数にコピーします
+local ozoom = 0
+if(arm_Cinfo.zoom == nil) then
+	debug_print("zoom is null")
+	ozoom = 1
+else
+	ozoom = arm_Cinfo.zoom
+end
+--親の拡大率を子供の移動量にかけます
+--理屈は面倒ですが、要は子供の座標に親を足すので親の拡大率が子供の位置に影響するとかとかとか…
+local dx = (obj.getvalue("x") + obj.ox) * ozoom
+local dy = (obj.getvalue("y") + obj.oy) * ozoom
+local dz = (obj.getvalue("z") + obj.oz) * ozoom
+--角度が度数法なので、それを弧度法に変換します
+local pi_180 = math.pi / 180
+local rz = arm_Cinfo.rz * pi_180
+local ry = arm_Cinfo.ry * pi_180
+local rx = arm_Cinfo.rx * pi_180
+--親の軸回転を実行します
+--回転させる軸の順番は大事です
+local cos = math.cos(rz)
+local sin = math.sin(rz)
+local x1 = dx * cos - dy * sin
+local y1 = dx * sin + dy * cos
+cos = math.cos(ry)
+sin = math.sin(ry)
+local z1 = dz * cos - x1 * sin
+--軸回転させた結果と親の位置のx、y、zの位置を相対位置に代入します
+--トラックバーの値を引くのは計算には必要でも、描画には必要ないからです
+arm_ox = -obj.getvalue("x") + (dz * sin + x1 * cos) + arm_Cinfo.x
+cos = math.cos(rx)
+sin = math.sin(rx)
+arm_oy = -obj.getvalue("y") + (y1 * cos - z1 * sin) + arm_Cinfo.y
+arm_oz = -obj.getvalue("z") + (y1 * sin + z1 * cos) + arm_Cinfo.z
+
+--r_P_C_ROTATION関数はluaファイルで作った関数です
+--親と子の回転を一つにまとめるのが関数の役割です
+arm_rx, arm_ry, arm_rz = r_P_C_ROTATION(obj.rx, obj.ry, obj.rz, arm_Cinfo.rx, arm_Cinfo.ry, arm_Cinfo.rz)
+
+--拡大率と透明度は単純にかけるだけです
+arm_zoom = obj.zoom * ozoom
+arm_alpha = obj.alpha * arm_Cinfo.alpha
+
+  if arm_rx==nil then arm_rx = obj.rx + arm_Cinfo.rx end
+  if arm_ry==nil then arm_ry = obj.ry + arm_Cinfo.ry end
+  if arm_rz==nil then arm_rz = obj.rz + arm_Cinfo.rz end
+
+if rikky_module==nil then
+	local CPATH = {}
+	local cpath = package.cpath .. ";"
+	local n
+	while(1)do
+		n = cpath:find(";")
+		if n then
+			CPATH[#CPATH + 1] = cpath:sub(1, n - 1)
+			cpath = cpath:sub(n + 1, #cpath)
+		else
+			break
+		end
+	end
+	if not CPATH[2]:find("script\\?.dll") then
+		CPATH[3]=CPATH[2]:sub(1, CPATH[2]:find("\\script\\")) .. "script\\?.dll"
+		package.cpath = package.cpath .. ";" .. CPATH[3]
+	end
+	for i=1,#CPATH do
+		local f=io.open(CPATH[i]:gsub("?", "rikky_module"),"rb")
+		if f then
+			require("rikky_module")
+			f:close()
+			break
+		end
+	end
+end
+if rikky_module then
+rikky_module.setdialogparam("arm_Cinfo",arm_Cinfo)
+end
+
+weight=bwt/math.sqrt(2)
+l=math.floor(weight)/2
+-- check.
+  XX={}
+  YY={}
+  ZZ={}
+  TW={}
+  XX[0]=0
+  YY[0]=0
+  ZZ[0]=0
+  TW[0]=0
+  XX[1]=ocr_t0/2
+  YY[1]=0
+  ZZ[1]=0
+  TW[1]=ocr_t3/2
+  XX[2]=ocr_t0/2
+  YY[2]=ocr_t1
+  ZZ[2]=ocr_t2
+  TW[2]=ocr_t3/2-ocr_t2
+  NN=2
+-- 関数共通
+function PassXYZ(s) -- s<=1
+  Ns=NN*s
+  Ns1=math.floor(Ns)
+  Ns2=(Ns-Ns1)/2
+
+  if Ns1<=0 then
+    nx=Ax[1]*Ns2*Ns2+Bx[1]*Ns2+Cx[1]
+    ny=Ay[1]*Ns2*Ns2+By[1]*Ns2+Cy[1]
+    nz=Az[1]*Ns2*Ns2+Bz[1]*Ns2+Cz[1]
+    nt=At[1]*Ns2*Ns2+Bt[1]*Ns2+Ct[1]
+  elseif Ns1==NN-1 then
+    SS1=Ns2+0.5
+    nx=Ax[Ns1]*SS1*SS1+Bx[Ns1]*SS1+Cx[Ns1]
+    ny=Ay[Ns1]*SS1*SS1+By[Ns1]*SS1+Cy[Ns1]
+    nz=Az[Ns1]*SS1*SS1+Bz[Ns1]*SS1+Cz[Ns1]
+    nt=At[Ns1]*SS1*SS1+Bt[Ns1]*SS1+Ct[Ns1]
+   elseif s==1 then
+    nx=XX[NN]
+    ny=YY[NN]
+    nz=ZZ[NN]
+    nt=TW[NN]
+  else
+    SS1=Ns2+0.5
+    SS2=Ns2
+    RS=2*Ns2
+    nx=(Ax[Ns1]*SS1*SS1+Bx[Ns1]*SS1+Cx[Ns1])*(1-RS)+RS*(Ax[Ns1+1]*SS2*SS2+Bx[Ns1+1]*SS2+Cx[Ns1+1])
+    ny=(Ay[Ns1]*SS1*SS1+By[Ns1]*SS1+Cy[Ns1])*(1-RS)+RS*(Ay[Ns1+1]*SS2*SS2+By[Ns1+1]*SS2+Cy[Ns1+1])
+    nz=(Az[Ns1]*SS1*SS1+Bz[Ns1]*SS1+Cz[Ns1])*(1-RS)+RS*(Az[Ns1+1]*SS2*SS2+Bz[Ns1+1]*SS2+Cz[Ns1+1])
+    nt=(At[Ns1]*SS1*SS1+Bt[Ns1]*SS1+Ct[Ns1])*(1-RS)+RS*(At[Ns1+1]*SS2*SS2+Bt[Ns1+1]*SS2+Ct[Ns1+1])
+  end
+  return nx,ny,nz,nt
+end
+
+function ShiftR(iax,iay,iaz,ir)
+  abs=(iax*iax+iay*iay)^0.5
+  ibx,iby=iay/abs,-iax/abs
+  icx,icy,icz=iax*iaz,iay*iaz,-iax*iax-iay*iay
+  abs=(icx*icx+icy*icy+icz*icz)^0.5
+  icx,icy,icz=icx/abs,icy/abs,icz/abs
+  mc=math.cos(ir/180*math.pi)  
+  ms=math.sin(ir/180*math.pi)
+  return obj.w*(ibx*mc+icx*ms)/2,obj.w*(iby*mc+icy*ms)/2,obj.w*(icz*ms)/2
+end
+
+  for i=1,NN do
+    s1=YY[i]*math.pi/180
+    s2=(ZZ[i]+90)*math.pi/180
+    XX[i],YY[i],ZZ[i]=XX[i]*math.sin(s1)*math.sin(s2),-XX[i]*math.cos(s1),-XX[i]*math.sin(s1)*math.cos(s2)
+  end
+
+-- --------以降共通
+  for i=1,NN do
+    XX[i]=XX[i-1]+XX[i]
+    YY[i]=YY[i-1]+YY[i]
+    ZZ[i]=ZZ[i-1]+ZZ[i]
+  end
+
+  OFH=(1+obj.frame)/(1+obj.totalframe)
+debug_print(string.format("OFH = %d, NN = %d, BN = %d",OFH,NN,BN))
+
+  Ax={};Bx={};Cx={};
+  Ay={};By={};Cy={};
+  Az={};Bz={};Cz={};
+  At={};Bt={};Ct={};
+
+  for M=1,NN-1 do
+    Ax[M]=2*XX[M-1]-4*XX[M]+2*XX[M+1]
+    Bx[M]=-3*XX[M-1]+4*XX[M]-XX[M+1] 
+    Cx[M]=XX[M-1]
+    Ay[M]=2*YY[M-1]-4*YY[M]+2*YY[M+1]
+    By[M]=-3*YY[M-1]+4*YY[M]-YY[M+1] 
+    Cy[M]=YY[M-1]
+    Az[M]=2*ZZ[M-1]-4*ZZ[M]+2*ZZ[M+1]
+    Bz[M]=-3*ZZ[M-1]+4*ZZ[M]-ZZ[M+1] 
+    Cz[M]=ZZ[M-1]
+    At[M]=2*TW[M-1]-4*TW[M]+2*TW[M+1]
+    Bt[M]=-3*TW[M-1]+4*TW[M]-TW[M+1] 
+    Ct[M]=TW[M-1]
+  end
+
+  if CHA==0 then
+    Nmax=NN*BN
+    Nv=Nmax
+    Ama=0
+  elseif CHA==1 then
+    Nmax=math.floor(NN*BN*OFH)
+    Nv=NN*BN
+    Ama=NN*BN*OFH-Nmax
+  elseif CHA==2 then
+    Nmax=math.floor(NN*BN*OFH)
+    Nv=Nmax
+    Ama=NN*BN*OFH-Nmax
+  elseif CHA==3 then 
+    Nmax=math.floor(NN*BN*OFH)
+  else
+    Nmax=NN*BN
+  end
+  Nhalf=math.floor(Nmax/2)
+
+--ライン描画
+ocr_fastdraw={}
+obj.load("figure","四角形",colA,l*8)
+obj.effect()
+obj.ox, obj.oy, obj.oz = arm_ox, arm_oy, arm_oz
+obj.rx, obj.ry, obj.rz = arm_rx, arm_ry, arm_rz
+obj.zoom,obj.alpha = arm_zoom,arm_alpha
+
+if CHA<3 then
+  xf,yf,zf,tf = PassXYZ(0)
+  ix,iy,iz,it =PassXYZ(0.5/(NN*BN))
+  dx,dy,dz= ShiftR(ix-xf,iy-yf,iz-zf,TW[0])
+  x1,y1,z1 = xf+dx,yf+dy,zf+dz
+  x0,y0,z0 = xf-dx,yf-dy,zf-dz
+    for i=1,Nhalf do
+      ix,iy,iz,it =PassXYZ(i/(NN*BN))
+      dx,dy,dz= ShiftR(ix-xf,iy-yf,iz-zf,it)
+      x2,y2,z2=ix+dx,iy+dy,iz+dz
+      x3,y3,z3=ix-dx,iy-dy,iz-dz
+      v1=obj.h*(1-(i)/(Nv+Ama))
+      v2=obj.h*(1-(i-1)/(Nv+Ama))
+      if SEC==1 then
+      table.insert(ocr_fastdraw,{y0,z0,x0, y1,z1,x1, y2,z2,x2, y3,z3,x3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+      elseif SEC==2 then
+      table.insert(ocr_fastdraw,{z0,y0,x0, z1,y1,x1, z2,y2,x2, z3,y3,x3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+      else
+      table.insert(ocr_fastdraw,{x0,y0,z0, x1,y1,z1, x2,y2,z2, x3,y3,z3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+      end
+      x0,y0,z0=x3,y3,z3
+      x1,y1,z1=x2,y2,z2
+      xf,yf,zf=ix,iy,iz
+    end -- i
+  if Ama>0 then
+    ix,iy,iz,it =PassXYZ((Nmax+Ama)/(NN*BN))
+    dx,dy,dz= ShiftR(ix-xf,iy-yf,iz-zf,it)
+    x2,y2,z2=ix+dx,iy+dy,iz+dz
+    x3,y3,z3=ix-dx,iy-dy,iz-dz
+    v1=obj.h*(1-(Nmax+Ama)/(Nv+Ama))
+    v2=obj.h*(1-Nmax/(Nv+Ama))
+    if SEC==1 then
+    table.insert(ocr_fastdraw,{y0,z0,x0, y1,z1,x1, y2,z2,x2, y3,z3,x3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+    elseif SEC==2 then
+    table.insert(ocr_fastdraw,{z0,y0,x0, z1,y1,x1, z2,y2,x2, z3,y3,x3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+    else
+    table.insert(ocr_fastdraw,{x0,y0,z0, x1,y1,z1, x2,y2,z2, x3,y3,z3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+    end
+  end
+  obj.drawpoly(ocr_fastdraw)
+else -- cha<3
+  for i=0,Nhalf do
+    obj.ox , obj.oy , obj.oz ,NL =PassXYZ(i/(NN*BN))
+    obj.draw()
+  end
+end
+
+ocr_fastdraw={}
+obj.load("figure","四角形",colB,l*8)
+obj.effect()
+obj.ox, obj.oy, obj.oz = arm_ox, arm_oy, arm_oz
+obj.rx, obj.ry, obj.rz = arm_rx, arm_ry, arm_rz
+obj.zoom,obj.alpha = arm_zoom,arm_alpha
+
+if CHA<3 then
+    for i=Nhalf+1,Nmax do
+      ix,iy,iz,it =PassXYZ(i/(NN*BN))
+      dx,dy,dz= ShiftR(ix-xf,iy-yf,iz-zf,it)
+      x2,y2,z2=ix+dx,iy+dy,iz+dz
+      x3,y3,z3=ix-dx,iy-dy,iz-dz
+      v1=obj.h*(1-(i)/(Nv+Ama))
+      v2=obj.h*(1-(i-1)/(Nv+Ama))
+      if SEC==1 then
+    table.insert(ocr_fastdraw,{y0,z0,x0, y1,z1,x1, y2,z2,x2, y3,z3,x3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+      elseif SEC==2 then
+    table.insert(ocr_fastdraw,{z0,y0,x0, z1,y1,x1, z2,y2,x2, z3,y3,x3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+      else
+    table.insert(ocr_fastdraw,{x0,y0,z0, x1,y1,z1, x2,y2,z2, x3,y3,z3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+      end
+      x0,y0,z0=x3,y3,z3
+      x1,y1,z1=x2,y2,z2
+      xf,yf,zf=ix,iy,iz
+    end -- i
+  if Ama>0 then
+    ix,iy,iz,it =PassXYZ((Nmax+Ama)/(NN*BN))
+    dx,dy,dz= ShiftR(ix-xf,iy-yf,iz-zf,it)
+    x2,y2,z2=ix+dx,iy+dy,iz+dz
+    x3,y3,z3=ix-dx,iy-dy,iz-dz
+    v1=obj.h*(1-(Nmax+Ama)/(Nv+Ama))
+    v2=obj.h*(1-Nmax/(Nv+Ama))
+    if SEC==1 then
+    table.insert(ocr_fastdraw,{y0,z0,x0, y1,z1,x1, y2,z2,x2, y3,z3,x3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+    elseif SEC==2 then
+    table.insert(ocr_fastdraw,{z0,y0,x0, z1,y1,x1, z2,y2,x2, z3,y3,x3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+    else
+    table.insert(ocr_fastdraw,{x0,y0,z0, x1,y1,z1, x2,y2,z2, x3,y3,z3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+    end
+  end
+  obj.drawpoly(ocr_fastdraw)
+else -- cha<3
+  for i=Nhalf+1,Nmax do
+    obj.ox , obj.oy , obj.oz ,NL =PassXYZ(i/(NN*BN))
+    obj.draw()
+  end
+end
+
+--頂点の描画
+if maru==1 then
+ocr_fastdraw={}
+  obj.load("figure","円",colA,l*8)
+  obj.effect()
+obj.ox, obj.oy, obj.oz = arm_ox, arm_oy, arm_oz
+obj.rx, obj.ry, obj.rz = arm_rx, arm_ry, arm_rz
+obj.zoom,obj.alpha = arm_zoom,arm_alpha
+
+  cw=l*4
+  for i=0,1 do
+    ix,iy,iz,it =PassXYZ(i/NN)
+    if SEC==1 then
+    table.insert(ocr_fastdraw,{iy+cw,iz,ix+cw, iy+cw,iz,ix-cw, iy-cw,iz,ix-cw, iy-cw,iz,ix+cw, 0,0, obj.w,0, obj.w,obj.h, 0,obj.h})
+    elseif SEC==2 then
+    table.insert(ocr_fastdraw,{iz,iy+cw,ix+cw, iz,iy+cw,ix-cw, iz,iy-cw,ix-cw, iz,iy-cw,ix+cw, 0,0, obj.w,0, obj.w,obj.h, 0,obj.h})
+    else
+    table.insert(ocr_fastdraw,{ix+cw,iy+cw,iz, ix-cw,iy+cw,iz, ix-cw,iy-cw,iz, ix+cw,iy-cw,iz, 0,0, obj.w,0, obj.w,obj.h, 0,obj.h})
+    end
+  end -- i
+  obj.drawpoly(ocr_fastdraw)
+end
+	OCRNextx,OCRNexty,OCRNextz,OCRNext = 0, 0, 0,1
+        ix,iy,iz,it =PassXYZ(1)
+    if SEC==1 then
+    OCRNextx,OCRNexty,OCRNextz = iy, iz, ix
+    elseif SEC==2 then
+    OCRNextx,OCRNexty,OCRNextz = iz, iy, ix
+    else
+    OCRNextx,OCRNexty,OCRNextz = ix, iy, iz
+    end
+debug_print(string.format("OCRNextx = %d, OCRNexty = %d, OCRNextz = %d",OCRNextx,OCRNexty,OCRNextz))
+
+-- ---------ここから違う
+--先端描画
+obj.load("figure","円",colB,size*4)
+obj.effect()
+obj.ox, obj.oy, obj.oz = arm_ox, arm_oy, arm_oz
+obj.rx, obj.ry, obj.rz = arm_rx, arm_ry, arm_rz
+obj.zoom,obj.alpha = arm_zoom,arm_alpha
+if arm_Cinfo.disp then
+	r_P_C_DISP(math.ceil(p_num), "c")
+end
+
+  if NN*BN*OFH<=1/2 then
+    inm=1/2
+  else
+    inm=NN*BN*OFH
+  end
+
+  if CHA==0 then inm=NN*BN end
+  
+debug_print(string.format("inm = %d, NN = %d, BN = %d",inm,NN,BN))
+
+  xf,yf,zf,tf = PassXYZ((inm-1/2)/(NN*BN))
+  ix,iy,iz,it = PassXYZ(inm/(NN*BN))
+
+  dx,dy,dz=ix-xf,iy-yf,iz-zf
+  kika=obj.h/(dx*dx+dy*dy+dz*dz)^0.5/2
+  dx,dy,dz=dx*kika,dy*kika,dz*kika
+
+  xf,yf,zf=ix-dx,iy-dy,iz-dz
+  ix,iy,iz=ix+dx,iy+dy,iz+dz
+  dx,dy,dz= ShiftR(dx,dy,dz,it)
+
+  x3,y3,z3 = xf-dx,yf-dy,zf-dz
+  x2,y2,z2 = xf+dx,yf+dy,zf+dz
+  x1,y1,z1 = ix+dx,iy+dy,iz+dz
+  x0,y0,z0 = ix-dx,iy-dy,iz-dz
+  if SEC==1 then
+    obj.drawpoly(y0,z0,x0, y1,z1,x1, y2,z2,x2, y3,z3,x3, 0,0, obj.w,0, obj.w,obj.h, 0,obj.h)
+  elseif SEC==2 then
+    obj.drawpoly(z0,y0,x0, z1,y1,x1, z2,y2,x2, z3,y3,x3, 0,0, obj.w,0, obj.w,obj.h, 0,obj.h)
+  else
+    obj.drawpoly(x0,y0,z0, x1,y1,z1, x2,y2,z2, x3,y3,z3, 0,0, obj.w,0, obj.w,obj.h, 0,obj.h)
+  end
+if ocr_useBoneP==1 then
+local OCRDx,OCRDy,OCRDz,OCRsrx,OCRsry,OCRsrz
+	local OCRNx,OCRNy,OCRNz,OCRNext = 0, 0, 0,1
+        ix,iy,iz,it =PassXYZ(1)
+    if SEC==1 then
+    OCRNx,OCRNy,OCRNz = iy, iz, ix
+    elseif SEC==2 then
+    OCRNx,OCRNy,OCRNz = iz, iy, ix
+    else
+    OCRNx,OCRNy,OCRNz = ix, iy, iz
+    end
+  OCRsrx,OCRsry,OCRsrz = obj.rx,obj.ry,obj.rz
+  if OCRsrx==nil then OCRsrx = 0 end
+  if OCRsry==nil then OCRsry = 0 end
+  if OCRsrz==nil then OCRsrz = 0 end
+  
+   OCRDx=math.rad(OCRsrx)
+   OCRDy=math.rad(OCRsry)
+   OCRDz=math.rad(OCRsrz)
+    OCRNextx,OCRNexty,OCRNextz=OCRRoll(OCRNx,OCRNy,OCRNz,OCRDx,OCRDy,OCRDz)
+--必要な情報は位置三方向、角度三方向、拡大率、透明度
+
+--位置はAviUtlの画面に対して絶対的な位置をコピーするのでトラックバーと相対的位置の和になります
+r_parent_info[p_numP].x = obj.getvalue("x") + OCRNextx
+r_parent_info[p_numP].y = obj.getvalue("y") + OCRNexty
+r_parent_info[p_numP].z = obj.getvalue("z") + OCRNextz
+
+--角度はすでにトラックバーの値が含まれているのでそのままです
+r_parent_info[p_numP].rx = obj.rx
+r_parent_info[p_numP].ry = obj.ry
+r_parent_info[p_numP].rz = obj.rz
+
+--拡大率はトラックバーの値そのままが出てくるので100で割ります
+r_parent_info[p_numP].zoom = obj.zoom * obj.getvalue("zoom") * 0.01
+
+--拡大率と透明度は足すのではなくかけて値をコピーします
+r_parent_info[p_numP].alpha = obj.alpha * obj.getvalue("alpha")
+--end
+end
