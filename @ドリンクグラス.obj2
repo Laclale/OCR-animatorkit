@@ -1,0 +1,105 @@
+@サイドビュー
+--label:カスタム-OCR
+--track@su:上円半径,0.5,500,100,0.1
+--track@sd:下円半径,0.5,500,100,0.1
+--track@sh:高さ,1,1000,100,1
+--track@drink:ドリンク量,0,1,0.75,0.01
+--color@col1:縁色,0x808000
+--color@col2:ドリンク色,0xffc880
+--value@line:ライン幅,10
+
+s1=math.min( su, sd )
+h=math.min( s1, line )
+s2=s1-h*2
+
+lu=su/2-h
+ld=sd/2-h
+luh=su/2
+ldh=sd/2
+
+sud=su*drink+sd*(1-drink)
+shd=sh*drink
+lud=sud/2-h
+
+--ドリンク部分
+if(shd>0) then
+obj.load("figure","四角形",col2,s2)
+obj.effect()
+obj.drawpoly(-lud,-shd,0, lud,-shd,0, ld, 0,0,-ld, 0,0)
+obj.load("figure","円",col2,sud)
+obj.effect()
+l=lud
+obj.drawpoly(-l,-shd,l, l,-shd,l, l, -shd,0,-l, -shd,0, 0,0,sud,0,sud,l+1,0,l+1)
+obj.load("figure","円",col2,sd)
+obj.effect()
+l=ld
+obj.drawpoly(-l,0,0, l,0,0, l, 0,-l,-l, 0,-l, 0,l+1,sd,l+1,sd,sd,0,sd)
+end
+
+--縁部分
+obj.load("figure","四角形",col1,h)
+obj.effect()
+obj.drawpoly(-luh,-sh,0, -lu,-sh,0, -ld, 0,0,-ldh, 0,0)
+obj.drawpoly(lu,-sh,0, luh,-sh,0, ldh, 0,0,ld, 0,0)
+obj.load("figure","円",col1,su,h)
+obj.effect()
+l=luh
+obj.drawpoly(-l,-sh,-l, l,-sh,-l, l,-sh,l, -l,-sh,l, 0,0,su,0,su,su,0,su)
+obj.load("figure","円",col1,sd,h)
+obj.effect()
+l=ldh
+obj.drawpoly(-l,0,l, l,0,l, l,0,-l, -l,0,-l, 0,0,sd,0,sd,sd,0,sd)
+@上下ビュー
+--label:カスタム-OCR
+--track@su:上円半径,0.5,500,100,0.1
+--track@sd:下円半径,0.5,500,100,0.1
+--track@sh:高さ,1,1000,100,1
+--track@drink:ドリンク量,0,1,0.75,0.01
+--check@futi:横エッジ絵画,0
+--color@col1:縁色,0x808000
+--color@col2:ドリンク色,0xffc880
+--value@line:ライン幅,10
+
+s1=math.min( su, sd )
+h=math.min( s1, line )
+s2=s1-h*2
+
+lu=su/2-h
+ld=sd/2-h
+luh=su/2
+ldh=sd/2
+
+sud=su*drink+sd*(1-drink)
+shd=sh*drink
+lud=sud/2-h
+
+--ドリンク部分
+if(shd>0) then
+obj.load("figure","四角形",col2,s2)
+obj.effect()
+obj.drawpoly(-lud,-shd,0, lud,-shd,0, ld, 0,0,-ld, 0,0)
+obj.load("figure","円",col2,sud)
+obj.effect()
+l=lud
+obj.drawpoly(-l,-shd,l, l,-shd,l, l, -shd,-l,-l,-shd,-l, 0,0,sud,0,sud,sud,0,sud)
+obj.load("figure","円",col2,sd)
+obj.effect()
+l=ld
+obj.drawpoly(-l,0,l, l,0,l, l, 0,-l,-l, 0,-l,0,0,sd,0,sd,sd,0,sd)
+end
+
+--縁部分
+if(futi==1) then
+  obj.load("figure","四角形",col1,h)
+obj.effect()
+  obj.drawpoly(-luh,-sh,0, -lu,-sh,0, -ld, 0,0,-ldh, 0,0)
+  obj.drawpoly(lu,-sh,0, luh,-sh,0, ldh, 0,0,ld, 0,0)
+end
+obj.load("figure","円",col1,su,h)
+obj.effect()
+l=luh
+obj.drawpoly(-l,-sh,-l, l,-sh,-l, l,-sh,l, -l,-sh,l, 0,0,su,0,su,su,0,su)
+obj.load("figure","円",col1,sd,h)
+obj.effect()
+l=ldh
+obj.drawpoly(-l,0,l, l,0,l, l,0,-l, -l,0,-l, 0,0,sd,0,sd,sd,0,sd)
