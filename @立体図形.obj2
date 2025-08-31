@@ -1,0 +1,1338 @@
+@中抜き角丸長方形
+--information:中抜き角丸長方形【ピクセル指定の角丸長方形&立体化】
+--track@r2:半径率,0,100,50
+--track@w:横幅,0,2000,0
+--track@h:高さ,0,7200,0
+--track@hh:奥行き,0,2000,0
+--color@mainCol:本体の色,0xffff00
+--track@ln:ライン率,0,100,50
+--track@div:丸め角数,1,30,6,1
+--value@hBase:高さ基準,0
+--value@futa:蓋の有無,3
+--check@futaPat:蓋の模様,0
+--color@futaCol:蓋の色,0xffff00
+--check@inPat:内側の模様,0
+--color@kiriCol:内側の色,0xffff00
+-- ======================================
+--　パラメータ初期化等
+-- ======================================
+
+require("OCRuv")
+r = math.max(0, math.min(w, h)*r2/200)
+wr,hr = w/2,h/2
+wt,ht = wr-r,hr-r
+
+hBase = math.max(0, math.min(2,math.floor(hBase)))
+futa = math.max(0, math.min(3, math.floor(futa)))
+
+startN = 1
+endN = div*4
+
+-- ======================================
+--　処理開始
+-- ======================================
+  obj.load("figure", "四角形", mainCol)
+obj.setoption('antialias',1)
+obj.effect()
+ocr_fd={}
+local ocr_fdIP,ocr_fdFP={},{}
+
+-- 左端から順に描いて行く
+
+r_in = r * ln/100 --内側半径
+delta = math.rad(360/endN)
+ww,ow = obj.w / endN,obj.w
+wu,hv = obj.w/2,obj.h/2
+wl,hl = wt+r_in,ht+r_in
+
+z0 = -hh/2
+z1 = -z0
+if (hBase==1) then
+  z0 = 0
+  z1 = hh
+elseif(hBase==2) then
+  z0 = -hh
+  z1 = 0
+end
+
+for i=startN-1,endN-1 do
+  d = math.fmod(i, endN)
+  rot0 = -delta * d
+  rot1 = rot0 - delta
+
+  xC = -wt
+  yC = ht
+if (i>div*3-1) then
+  xC = wt
+elseif(i>div*2-1) then
+  xC = wt
+  yC = -ht
+elseif(i>div-1) then
+  yC = -ht
+end
+
+  x0 = r * math.sin(rot0) + xC
+  x1 = r * math.sin(rot1) + xC
+  y0 = r * math.cos(rot0) + yC
+  y1 = r * math.cos(rot1) + yC
+  x0_in = r_in * math.sin(rot0) + xC
+  x1_in = r_in * math.sin(rot1) + xC
+  y0_in = r_in * math.cos(rot0) + yC
+  y1_in = r_in * math.cos(rot1) + yC
+
+  px0 = ww * d
+  px1 = ww * (d+1)
+  py0 = 0
+  py1 = obj.h
+
+  -- 外径面
+  table.insert(ocr_fd,{x0,y0,z0, x0,y0,z1, x1,y1,z1, x1,y1,z0,  px0,py0, px0,py1, px1,py1, px1,py0})
+
+  -- オブジェクトを利用して内側面を描くならここで描く
+  if (r_in ~= 0) then
+    table.insert(ocr_fdIP,{x0_in,y0_in,z1, x0_in,y0_in,z0, x1_in,y1_in,z0, x1_in,y1_in,z1,  px0,py1, px0,py0, px1,py0, px1,py1})
+  end
+
+  -- オブジェクトの端を利用して蓋を描くならここで描く
+    -- 上蓋部分
+    if ((futa==1) or (futa==3)) then
+      table.insert(ocr_fdFP,{x1_in,y1_in,z0,x1,y1,z0,x0,y0,z0,x0_in,y0_in,z0, px0,py0, px1,py0, px1,py0+1, px0,py0+1})
+    end
+    -- 下蓋部分
+    if ((futa==2) or (futa==3)) then
+      table.insert(ocr_fdFP,{x1,y1,z1,x1_in,y1_in,z1,x0_in,y0_in,z1,x0,y0,z1, px0,py1-1, px1, py1-1,px1,py1, px0,py1})
+    end
+end
+
+--長方形分
+  -- 外径面
+  table.insert(ocr_fd,{-wt,-hr,z1, wt,-hr,z1, wt,-hr,z0,-wt,-hr,z0, wu,0, wu+1,0, wu+1,0, wu,0})
+  table.insert(ocr_fd,{-wt, hr,z0, wt, hr,z0, wt, hr,z1,-wt, hr,z1, wu,py1, wu+1,py1, wu+1,py1, wu,py1})
+  table.insert(ocr_fd,{-wr,-ht,z1,-wr,-ht,z0,-wr, ht,z0,-wr, ht,z1, 0,hv, 0,hv, 0,hv+1, 0,hv+1})
+  table.insert(ocr_fd,{wr,-ht,z0, wr,-ht,z1, wr, ht,z1, wr, ht,z0, ow,hv, ow,hv, ow,hv+1, ow,hv+1})
+
+  -- オブジェクトを利用して内側面を描くならここで描く
+  if (r_in ~= 0) then
+    table.insert(ocr_fdIP,{wt, hl,z1,-wt, hl,z0,-wt, hl,z0, wt, hl,z1, wu-1,0, wu,0, wu,0, wu-1,0})
+    table.insert(ocr_fdIP,{wt,-hl,z1,-wt,-hl,z0,-wt,-hl,z0, wt,-hl,z1, wu-1,py1, wu,py1, wu,py1, wu-1,py1})
+    table.insert(ocr_fdIP,{wl,-ht,z1, wl,-ht,z0, wl, ht,z0, wl, ht,z1, 0,hv-1, 0,hv-1, 0,hv, 0,hv})
+    table.insert(ocr_fdIP,{-wl,-ht,z1,-wl,-ht,z0,-wl, ht,z0,-wl, ht,z1, ow,hv-1, ow,hv-1, ow,hv, ow,hv})
+  end
+
+  -- オブジェクトの端を利用して蓋を描くならここで描く
+  --wl,hl = wt+r_in,ht+r_in wr,hr
+    -- 上蓋部分
+    if ((futa==1) or (futa==3)) then
+      table.insert(ocr_fdFP,{-wt,-hr,z0,wt,-hr,z0,wt,-hl,z0,-wt,-hl,z0, wu,0, wu+1,0, wu+1,0, wu,0})
+      table.insert(ocr_fdFP,{-wt, hl,z0,wt, hl,z0,wt, hr,z0,-wt, hr,z0, wu,py1, wu+1,py1, wu+1,py1, wu,py1})
+      table.insert(ocr_fdFP,{-wr,-ht,z0,-wl,-ht,z0,-wl,ht,z0,-wr,ht,z0, 0,hv, 1,hv, 1,hv+1, 0,hv+1})
+      table.insert(ocr_fdFP,{wl,-ht,z0, wr,-ht,z0, wr,ht,z0, wl,ht,z0, ow-1,hv, ow,hv, ow,hv+1, ow-1,hv+1})
+    end
+    -- 下蓋部分
+    if ((futa==2) or (futa==3)) then
+      table.insert(ocr_fd,{wt,-hl,z1,-wt,-hl,z1,-wt,-hr,z1, wt,-hr,z1, wu,0, wu-1,0, wu-1,0, wu,0})
+      table.insert(ocr_fd,{wt, hr,z1,-wt, hr,z1,-wt, hl,z1, wt, hl,z1, wu,py1, wu-1,py1, wu-1,py1, wu,py1})
+      table.insert(ocr_fd,{wr,-ht,z1, wl,-ht,z1, wl, ht,z1, wr, ht,z1, 1,hv, 0,hv, 0,hv+1, 1,hv+1})
+      table.insert(ocr_fd,{-wl,-ht,z1,-wr,-ht,z1,-wr, ht,z1,-wl, ht,z1, ow-1,hv, ow,hv, ow,hv+1, ow-1,hv+1})
+    end
+  obj.drawpoly(ocr_fd)
+if ((r_in ~= 0) and (inPat==0)) then
+  obj.drawpoly(ocr_fdIP)
+end
+if ((futaPat == 0) and (futa>0)) then
+  obj.drawpoly(ocr_fdFP)
+end
+
+-- 色指定で切り口や内面を描く場合はobj.load()が必要になるので、
+-- 二度手間になっちゃうけど再計算して描画する。
+if ((r_in ~= 0) and (inPat==1)) then
+  obj.load("figure", "四角形", kiriCol, 1)
+  obj.setoption('antialias',1)
+  obj.effect()
+  obj.drawpoly(ocr_fdIP)
+end
+
+-- 色指定で蓋を描く場合はobj.load()が必要になるので、
+-- 二度手間になっちゃうけど再計算して描画する。
+if ((futaPat == 1) and (futa>0)) then
+  obj.load("figure", "四角形", futaCol, 1)
+  obj.setoption('antialias',1)
+  obj.effect()
+  ocr_fixuv(ocr_fdFP,{0,0,1,0,1,1,0,1})
+  obj.drawpoly(ocr_fdFP)
+end
+
+@xyz直方体
+--information:xyz直方体【ピクセル指定の直方体】
+--track@sxt:幅,0,4000,100,1
+--track@syt:高さ,0,4000,100,1
+--track@szt:奥行き,0,4000,100,1
+--color@cc:0xffffff
+sx,sy,sz=sxt/2,syt/2,szt/2
+s=math.max(sx,sy)
+
+obj.load("figure","四角形",cc,s)
+obj.effect()
+obj.drawpoly(-sx,-sy, sz, sx,-sy, sz, sx, sy, sz,-sx, sy, sz)
+obj.drawpoly(-sx,-sy,-sz, sx,-sy,-sz, sx, sy,-sz,-sx, sy,-sz)
+obj.drawpoly( sx, sy,-sz, sx, sy, sz, sx,-sy, sz, sx,-sy,-sz)
+obj.drawpoly(-sx, sy,-sz,-sx, sy, sz,-sx,-sy, sz,-sx,-sy,-sz)
+obj.drawpoly(-sx, sy,-sz,-sx, sy, sz, sx, sy, sz, sx, sy,-sz)
+obj.drawpoly(-sx,-sy,-sz,-sx,-sy, sz, sx,-sy, sz, sx,-sy,-sz)
+@コンパス足
+--track@w:本体高さ,1,1000,270
+--track@ndlh:針高さ,0,500,125
+--track@iy:中心位置,-500,500,0
+--track@div:分割数,3,120,24,1
+--color@col1:本体色,0x800080
+--color@col2:針色,0xffffff
+--value@outs:本体半径,260
+--value@ndls:針半径,60
+require("OCRuv")
+ndhs = math.max(ndlh,ndls)
+inhs = math.max(w,outs)
+ouths = math.max(math.abs(iy),outs)
+
+--本体
+  local l,m=ndls/2,outs/2
+  local pir=math.pi*2/div
+  ocr_fd={}
+  obj.load("figure","四角形",col1,outs)
+  obj.effect()
+  for i=0,div-1 do
+    x0=m*math.cos(pir*(i+1))
+    x1=m*math.cos(pir*i)
+    y0=m*math.sin(pir*(i+1))
+    y1=m*math.sin(pir*i)
+    table.insert(ocr_fd,{x0,-w+iy,y0,x0,iy,y0,x1,iy,y1,x1,-w+iy,y1})
+  end
+  ocr_filluv(ocr_fd,obj)
+  obj.drawpoly(ocr_fd)
+  ocr_fd={}
+  obj.load("figure","四角形",col1,ouths)
+  obj.effect()
+  for i=0,div-1 do
+    x0=l*math.cos(pir*(i+1))
+    x1=l*math.cos(pir*i)
+    y0=l*math.sin(pir*(i+1))
+    y1=l*math.sin(pir*i)
+    x2=m*math.cos(pir*(i+1))
+    x3=m*math.cos(pir*i)
+    y2=m*math.sin(pir*(i+1))
+    y3=m*math.sin(pir*i)
+    table.insert(ocr_fd,{x2,-w+iy,y2,x0,-w+iy,y0,x1,-w+iy,y1,x3,-w+iy,y3})
+    table.insert(ocr_fd,{0,iy,0,0,iy,0,x3,iy,y3,x2,iy,y2})
+  end
+  ocr_filluv(ocr_fd,obj)
+  obj.drawpoly(ocr_fd)
+    -- 頂点を1-1-2-3でdrawpolyに渡すよう意識する。
+  local u=w+ndlh
+  local uu=ndls/2
+  ocr_fd={}
+  obj.load("figure","四角形",col2,ndhs)
+  obj.effect()
+  for i=0,div-1 do
+    x0=uu*math.cos(pir*(i+1))
+    x1=uu*math.cos(pir*i)
+    y0=uu*math.sin(pir*(i+1))
+    y1=uu*math.sin(pir*i)
+    table.insert(ocr_fd,{0,-u+iy,0,0,-u+iy,0,x0,-w+iy,y0,x1,-w+iy,y1})
+  end
+  ocr_filluv(ocr_fd,obj)
+  obj.drawpoly(ocr_fd)
+
+@Pin
+--information:Pin【BFDIのPinがモチーフ】
+--track@w:本体高さ,1,1000,270
+--track@wwt:内高さ,1,500,150
+--track@ndlh:針高さ,0,500,125
+--track@iy:内位置,-100,100,-10
+--track@div:分割数,3,120,24,1
+--color@col1:本体色,0x800080
+--color@col2:針色,0xffffff
+--value@outs:外半径,260
+--value@insz:内半径,180
+--value@ndls:針半径,60
+require("OCRuv")
+ww=math.min(wwt,w*0.9)
+hh=(w-ww)/2
+ndhs = math.max(ndlh,ndls)
+inhs = math.max(ww,insz)
+ouths = math.max(hh+math.abs(iy),math.max(outs,insz))
+
+--本体
+  local l,m,pir=insz/2,outs/2,math.pi*2/div
+  ocr_fd={}
+  obj.load("figure","四角形",col1,inhs)
+  obj.effect()
+  for i=0,div-1 do
+    x0=l*math.cos(pir*(i+1))
+    x1=l*math.cos(pir*i)
+    y0=l*math.sin(pir*(i+1))
+    y1=l*math.sin(pir*i)
+    table.insert(ocr_fd,{x0,-ww/2+iy,y0,x0,ww/2+iy,y0,x1,ww/2+iy,y1,x1,-ww/2+iy,y1})
+  end
+  ocr_filluv(ocr_fd,obj)
+  obj.drawpoly(ocr_fd)
+  ocr_fd={}
+  obj.load("figure","四角形",col1,ouths)
+  obj.effect()
+  for i=0,div-1 do
+    x0=l*math.cos(pir*(i+1))
+    x1=l*math.cos(pir*i)
+    y0=l*math.sin(pir*(i+1))
+    y1=l*math.sin(pir*i)
+    x2=m*math.cos(pir*(i+1))
+    x3=m*math.cos(pir*i)
+    y2=m*math.sin(pir*(i+1))
+    y3=m*math.sin(pir*i)
+    table.insert(ocr_fd,{x2,-w/2,y2,x0,-ww/2+iy,y0,x1,-ww/2+iy,y1,x3,-w/2,y3})
+    table.insert(ocr_fd,{0,-w/2+iy,0,0,-w/2+iy,0,x2,-w/2+iy,y2,x3,-w/2+iy,y3})
+    table.insert(ocr_fd,{x0,ww/2+iy,y0,x2,w/2,y2,x3,w/2,y3,x1,ww/2+iy,y1})
+    table.insert(ocr_fd,{0,w/2+iy,0,0,w/2+iy,0,x3,w/2+iy,y3,x2,w/2+iy,y2})
+  end
+  ocr_filluv(ocr_fd,obj)
+  obj.drawpoly(ocr_fd)
+  ocr_fd={}
+    -- 頂点を1-1-2-3でdrawpolyに渡すよう意識する。
+  local u=w/2+ndlh
+  local uu=ndls/2
+  obj.load("figure","四角形",col2,ndhs)
+  obj.effect()
+  for i=0,div-1 do
+    x0=uu*math.cos(pir*(i+1))
+    x1=uu*math.cos(pir*i)
+    y0=uu*math.sin(pir*(i+1))
+    y1=uu*math.sin(pir*i)
+    table.insert(ocr_fd,{0,-u,0,0,-u,0,x0,-w/2,y0,x1,-w/2,y1})
+  end
+  ocr_filluv(ocr_fd,obj)
+  obj.drawpoly(ocr_fd)
+
+@Rolly
+--information:Rolly【ロールケーキ】
+--track@s:サイズ,1,1000,100,1
+--track@w:奥行き,1,500,20,1
+--track@ocr_t2:ライン幅,0,4000,4000,1
+--track@n:分割数,3,50,20,1
+--color@col1:外側色,0x800080
+--color@col2:中身色,0xffffff
+--check@maru:丸める,0
+h=math.min(ocr_t2,s/10)
+
+NN=4-1
+BN=n/2
+pos={-100/500*s,0,0,-100/500*s,100/500*s,0,-100/500*s,200/500*s}
+
+XX={};YY={};
+for i=0,NN do
+  XX[i]=pos[2*i+1]
+  YY[i]=pos[2*i+2]
+end
+
+--補完曲線の算定(ティム氏の簡易モーションパスより一部を改変して使用)
+function PassXYZ(s) -- s<=1
+  Ns=NN*s
+  Ns1=math.floor(Ns)
+  Ns2=(Ns-Ns1)/2
+  if Ns1<=0 then
+    nx=Ax[1]*Ns2*Ns2+Bx[1]*Ns2+Cx[1]
+    ny=Ay[1]*Ns2*Ns2+By[1]*Ns2+Cy[1]
+  elseif Ns1==NN-1 then
+    SS1=Ns2+0.5
+    nx=Ax[Ns1]*SS1*SS1+Bx[Ns1]*SS1+Cx[Ns1]
+    ny=Ay[Ns1]*SS1*SS1+By[Ns1]*SS1+Cy[Ns1]
+  elseif s==1 then
+    nx=XX[NN]
+    ny=YY[NN]
+  else
+    SS1=Ns2+0.5
+    SS2=Ns2
+    RS=2*Ns2
+    nx=(Ax[Ns1]*SS1*SS1+Bx[Ns1]*SS1+Cx[Ns1])*(1-RS)+RS*(Ax[Ns1+1]*SS2*SS2+Bx[Ns1+1]*SS2+Cx[Ns1+1])
+    ny=(Ay[Ns1]*SS1*SS1+By[Ns1]*SS1+Cy[Ns1])*(1-RS)+RS*(Ay[Ns1+1]*SS2*SS2+By[Ns1+1]*SS2+Cy[Ns1+1])
+  end
+  return nx,ny
+end
+
+Ax={};Bx={};Cx={};
+Ay={};By={};Cy={};
+for M=1,NN-1 do
+  Ax[M]=2*XX[M-1]-4*XX[M]+2*XX[M+1]
+  Bx[M]=-3*XX[M-1]+4*XX[M]-XX[M+1]
+  Cx[M]=XX[M-1]
+  Ay[M]=2*YY[M-1]-4*YY[M]+2*YY[M+1]
+  By[M]=-3*YY[M-1]+4*YY[M]-YY[M+1]
+  Cy[M]=YY[M-1]
+end
+
+Nmax=NN*BN
+
+--仮想バッファサイズ計算
+sw = 0
+sh = 0
+  if( sw < s/2 ) then sw = s/2 end
+  if( sh < s/2 ) then sh = s/2 end
+for i=0,NN do
+  dx = math.ceil(math.abs(pos[i*2+1])+h+1)
+  dy = math.ceil(math.abs(pos[i*2+2])+h+1)
+  if( sw < dx ) then sw = dx end
+  if( sh < dy ) then sh = dy end
+end
+obj.setoption("drawtarget","tempbuffer",sw*2.5,sh*2.5)
+obj.load("figure","円",col2,s)
+x=obj.w/2
+y=obj.h/2
+obj.drawpoly(-x,-y, 0,x,-y, 0,x,y, 0,-x,y, 0)
+--クリーム
+obj.load("figure","円",col1,s,h)
+obj.drawpoly(-x,-y, 0,x,-y, 0,x,y, 0,-x,y, 0)
+--外側
+
+--ライン描画
+obj.load("figure","四角形",col1,1)
+--obj.setoption("blend","alpha_max")
+x0 = pos[1]
+y0 = pos[2]
+for i=1,Nmax do
+  x1,y1 = PassXYZ(i/(NN*BN))
+  r = math.atan2(y0-y1,x1-x0)
+  dx = math.sin(r)*h/2
+  dy = math.cos(r)*h/2
+  obj.drawpoly(x0-dx,y0-dy,0,x1-dx,y1-dy,0,x1+dx,y1+dy,0,x0+dx,y0+dy,0)
+  x0 = x1
+  y0 = y1
+end
+
+--頂点の描画
+obj.load("figure","円",col1,h*1.5)
+for i=1-maru,Nmax-1+maru do
+  x0,y0 = PassXYZ(i/(NN*BN))
+  obj.drawpoly(x0-h/2,y0-h/2,0,x0+h/2,y0-h/2,0,x0+h/2,y0+h/2,0,x0-h/2,y0+h/2,0)
+end
+
+obj.setoption("blend",0)
+obj.load("tempbuffer")
+obj.setoption("drawtarget","framebuffer")
+--巻き完成
+
+x=obj.w/2
+y=obj.h/2
+obj.effect()
+obj.drawpoly(-x,-y, w/2,x,-y, w/2,x,y, w/2,-x,y, w/2)
+obj.drawpoly(-x,-y,-w/2,x,-y,-w/2,x,y,-w/2,-x,y,-w/2)
+
+--本体
+for k=0,1 do
+  s=s-2*h*k
+  ocr_fd={}
+  obj.load("figure","四角形",col1,s/n)
+  obj.effect()
+  local l=s/2
+  local pir=math.pi*2/n
+  for i=0,n-1 do
+    x0=l*math.cos(pir*(i+1))
+    x1=l*math.cos(pir*i)
+    y0=l*math.sin(pir*(i+1))
+    y1=l*math.sin(pir*i)
+    table.insert(ocr_fd,{x0,y0,-w/2,x0,y0,w/2,x1,y1,w/2,x1,y1,-w/2})
+  end
+  ocr_filluv(ocr_fd,obj)
+  obj.drawpoly(ocr_fd)
+end
+
+@SharbetDice
+--track@s1:サイズ,1,1000,100,1
+--track@ocr_t1:ライン幅,0,1000,10,1
+--track@ocr_t2:透明度,0,100,0
+--track@qwe:調節,-100,100,0
+--color@col2:本体色,0x00ffff
+--value@curve:丸み割合,20
+--value@shutter:丸み分割,10
+--check@futi:縁絵画,0
+--color@col1:縁色,0xffffff
+--color@col3:出目色,0x000000
+--check@mode:明滅あり,0
+--value@t:明滅間隔,1
+h=math.min( s1/2, ocr_t1/4 )
+s2=s1-h*2
+a=(100-ocr_t2)/100
+crv=math.min( 50, curve/2 )
+shutter = math.floor(math.min(shutter,crv))
+require("SharbetUtil2")
+
+if(mode<1) then
+ alp=a
+else
+ alp=(math.sin(2*math.pi*obj.time*(1/t))*0.5+0.5)*a
+end
+
+ocr_fd={}
+local ocr_fc={}
+obj.load("figure","四角形",col1,s2)
+obj.effect("グラデーション","幅",s2/2,"color",0x0ffffff,"color2",col2)
+obj.effect()
+obj.alpha=a
+
+l=s2/2
+v2=obj.h
+--時計回りになるほうが表面となります。
+table.insert(ocr_fc,drawcurve(obj,0,-l+h,0, 5, s2,s2, 0,0,v2,crv,shutter,qwe))
+table.insert(ocr_fc,drawcurve(obj,-l+h,0,0, 1, s2,s2, 0,v2,v2,crv,shutter,qwe))
+table.insert(ocr_fc,drawcurve(obj,0,0,-l+h, 4, s2,s2, 0,v2,v2,crv,shutter,qwe))
+table.insert(ocr_fc,drawcurve(obj, l-h,0,0, 6, s2,s2, 0,v2,v2,crv,shutter,qwe))
+table.insert(ocr_fc,drawcurve(obj,0,0, l-h, 3, s2,s2, 0,v2,v2,crv,shutter,qwe))
+table.insert(ocr_fc,drawcurve(obj,0, l-h,0, 2, s2,s2, v2,v2,v2,crv,shutter,qwe))
+for k, v in ipairs(ocr_fc) do
+	for kk, vv in ipairs(v) do
+		table.insert(ocr_fd,vv)
+	end
+end
+obj.drawpoly(ocr_fd)
+
+ocr_fd={}
+obj.load("figure","円",col3,s2/3)
+obj.alpha=a
+l=s1/2
+local lm=s2/3*0.8
+local lt=s2*3/9
+
+table.insert(ocr_fd,drawmark(obj,-l,0,0,1,lm,lm))
+table.insert(ocr_fd,drawmark(obj,-lt,-lt,-l,4,lm,lm))
+table.insert(ocr_fd,drawmark(obj,-lt,lt,-l,4,lm,lm))
+table.insert(ocr_fd,drawmark(obj,lt,-lt,-l,4,lm,lm))
+table.insert(ocr_fd,drawmark(obj,lt,lt,-l,4,lm,lm))
+table.insert(ocr_fd,drawmark(obj, l,-lt,-lt,6,lm,lm))
+table.insert(ocr_fd,drawmark(obj, l,0,-lt,6,lm,lm))
+table.insert(ocr_fd,drawmark(obj, l,lt,-lt,6,lm,lm))
+table.insert(ocr_fd,drawmark(obj, l,-lt,lt,6,lm,lm))
+table.insert(ocr_fd,drawmark(obj, l,0,lt,6,lm,lm))
+table.insert(ocr_fd,drawmark(obj, l,lt,lt,6,lm,lm))
+table.insert(ocr_fd,drawmark(obj,-lt,-lt, l,3,lm,lm))
+table.insert(ocr_fd,drawmark(obj,0,0, l,3,lm,lm))
+table.insert(ocr_fd,drawmark(obj,lt,lt, l,3,lm,lm))
+table.insert(ocr_fd,drawmark(obj,-lt, l,lt,2,lm,lm))
+table.insert(ocr_fd,drawmark(obj,lt, l,-lt,2,lm,lm))
+obj.drawpoly(ocr_fd)
+
+if(futi==1) then
+ocr_fd={}
+obj.load("figure","四角形",col1,s1,h*2)
+l,ow=obj.w/2,obj.w
+obj.alpha=alp
+table.insert(ocr_fd,{-l,-l,-l,  l,-l,-l,  l, l,-l, -l, l,-l})
+table.insert(ocr_fd,{l,-l, l, -l,-l, l, -l, l, l,  l, l, l})
+table.insert(ocr_fd,{-l, l,-l,  l, l,-l,  l, l, l, -l, l, l})
+table.insert(ocr_fd,{l,-l,-l, -l,-l,-l, -l,-l, l,  l,-l, l})
+table.insert(ocr_fd,{l,-l,-l,  l,-l, l,  l, l, l,  l, l,-l})
+table.insert(ocr_fd,{-l,-l, l, -l,-l,-l, -l, l,-l, -l, l, l})
+ocr_fixuv(ocr_fd,{0,0,ow,0,ow,ow,0,ow})
+obj.drawpoly(ocr_fd)
+end
+
+@IceCube
+--track@s1:サイズ,1,1000,100,1
+--track@ocr_t1:ライン幅,0,1000,10,1
+--track@ocr_t2:透明度,0,100,0
+--track@qwe:調節,-100,100,0
+--color@col2:本体色,0x00ffff
+--value@curve:丸み割合,20
+--value@shutter:丸み分割,10
+--check@futi:縁絵画,0
+--color@col1:縁色,0xffffff
+--color@col3:出目色,0x000000
+--check@mode:明滅あり,0
+--value@t:明滅間隔,1
+
+h=math.min( s1/2, ocr_t1/4 )
+s2=s1-h*2
+a=(100-ocr_t2)/100
+crv=math.min( 50, curve/2 )
+shutter = math.floor(math.min(shutter,crv))
+require("SharbetUtil2")
+
+if(mode<1) then
+ alp=a
+else
+ alp=(math.sin(2*math.pi*obj.time*(1/t))*0.5+0.5)*a
+end
+
+ocr_fd={}
+local ocr_fc={}
+obj.load("figure","四角形",col1,s2)
+obj.effect("グラデーション","幅",s2/2,"color",0x0ffffff,"color2",col2)
+obj.effect()
+obj.alpha=a
+
+l=s2/2
+v2=obj.h
+--obj.drawpoly(x0,y0,z0,x1,y1,z1,x2,y2,z2,x3,y3,z3, u0,v0,u1,v0,u1,v2,u0,v2)
+--時計回りになるほうが表面となります。
+table.insert(ocr_fc,drawcurve(obj,0,-l+h,0, 5, s2,s2, 0,0,v2,crv,shutter,qwe))
+table.insert(ocr_fc,drawcurve(obj,-l+h,0,0, 1, s2,s2, 0,v2,v2,crv,shutter,qwe))
+table.insert(ocr_fc,drawcurve(obj,0,0,-l+h, 4, s2,s2, 0,v2,v2,crv,shutter,qwe))
+table.insert(ocr_fc,drawcurve(obj, l-h,0,0, 6, s2,s2, 0,v2,v2,crv,shutter,qwe))
+table.insert(ocr_fc,drawcurve(obj,0,0, l-h, 3, s2,s2, 0,v2,v2,crv,shutter,qwe))
+table.insert(ocr_fc,drawcurve(obj,0, l-h,0, 2, s2,s2, v2,v2,v2,crv,shutter,qwe))
+for k, v in ipairs(ocr_fc) do
+	for kk, vv in ipairs(v) do
+		table.insert(ocr_fd,vv)
+	end
+end
+obj.drawpoly(ocr_fd)
+
+if(futi==1) then
+ocr_fd={}
+obj.load("figure","四角形",col1,s1,h*2)
+l,ow=obj.w/2,obj.w
+obj.alpha=alp
+table.insert(ocr_fd,{-l,-l,-l,  l,-l,-l,  l, l,-l, -l, l,-l})
+table.insert(ocr_fd,{l,-l, l, -l,-l, l, -l, l, l,  l, l, l})
+table.insert(ocr_fd,{-l, l,-l,  l, l,-l,  l, l, l, -l, l, l})
+table.insert(ocr_fd,{l,-l,-l, -l,-l,-l, -l,-l, l,  l,-l, l})
+table.insert(ocr_fd,{l,-l,-l,  l,-l, l,  l, l, l,  l, l,-l})
+table.insert(ocr_fd,{-l,-l, l, -l,-l,-l, -l, l,-l, -l, l, l})
+ocr_fixuv(ocr_fd,{0,0,ow,0,ow,ow,0,ow})
+obj.drawpoly(ocr_fd)
+end
+
+@Poppin
+--information:Poppin【先の丸いピンもこれで立体化できます】
+--track@r:半径,0,2000,150
+--track@ocr_t1:軸回転,-7200,7200,0
+--track@d:拡散,-2000,2000,0
+--track@nn:高さ,0,7200,0
+--color@col1:頭色,0x800080
+--color@col2:針色,0x800080
+--track@h:縦分割,2,120,12,1
+--track@w:横分割,3,120,24,1
+--value@alias:アンチエイリアス,1
+--check@head:頭なし,0
+--track@stick:棒割合,0,100,10
+
+rotShift = math.rad(ocr_t1)
+q=r*stick/100
+
+--三角形ポリゴン問題を防ぐために最小でも0.1になるように内部で強制調整
+--（トラックで最小値を0.1としてもよいのだが、ドラッグで値を調整するときに
+--　数値にコンマ１がつくのもなんか気持ち悪いかなと思って。）
+minR = 0.1
+
+local function ocr_fastdraw(tbl)
+	local ow,oh=obj.w,obj.h
+	local fixeduv={0,0,ow,0,ow,oh,0,oh}
+  for k, v in ipairs(tbl) do
+	for kk, vv in ipairs(fixeduv) do
+		tbl[k][12+kk]=vv
+	end
+  end
+	obj.drawpoly(tbl)
+end
+
+if head==0 then
+  ocr_fd={}
+obj.load("figure","四角形",col1,r*2)
+deltaH = math.rad(180/h)
+deltaW = math.rad(360/w)
+deltaU = obj.w/w
+deltaV = obj.h/h
+
+obj.setoption('antialias',alias)
+obj.effect()
+
+for y=0,h-1 do
+  rotH0 = deltaH*y
+  rotHC = rotH0 + deltaH/2
+  rotH1 = rotH0 + deltaH
+
+  yC = -d*math.cos(rotHC)
+  y0 = -r*math.cos(rotH0) + yC
+  y1 = -r*math.cos(rotH1) + yC
+
+  rC = d*math.sin(rotHC)
+
+  -- r0とr1をminRで下限制御
+  r0 = math.max( minR, (r*math.sin(rotH0)) )
+  r1 = math.max( minR, (r*math.sin(rotH1)) )
+
+  v0 = deltaV*y
+  v1 = deltaV*(y+1)
+
+  for x=0,w-1 do
+    rotW0= -deltaW*x + rotShift
+    rotWC = rotW0 - deltaW/2
+    rotW1 = rotW0 - deltaW
+
+    xC = rC*math.sin(rotWC)
+    zC = rC*math.cos(rotWC)
+
+    x0 = r0*math.sin(rotW0) + xC
+    x1 = r0*math.sin(rotW1) + xC
+    x2 = r1*math.sin(rotW1) + xC
+    x3 = r1*math.sin(rotW0) + xC
+    z0 = r0*math.cos(rotW0) + zC
+    z1 = r0*math.cos(rotW1) + zC
+    z2 = r1*math.cos(rotW1) + zC
+    z3 = r1*math.cos(rotW0) + zC
+    u0 = deltaU*x
+    u1 = deltaU*(x+1)
+    table.insert(ocr_fd,{x0,y0,z0,x1,y0,z1,x2,y1,z2,x3,y1,z3,u0,v0,u1,v0,u1,v1,u0,v1})
+  end
+end
+  obj.drawpoly(ocr_fd)
+
+--ライン
+s,n=(q+r)*2, r/h*8
+obj.load("figure","円",col1,s,q*4)
+obj.effect()
+x,y=obj.w/2,obj.h/2
+obj.drawpoly(-x, n/2,-y,x, n/2,-y,x, n/2,y,-x, n/2,y)
+obj.drawpoly(-x,-n/2,-y,x,-n/2,-y,x,-n/2,y,-x,-n/2,y)
+  ocr_fd={}
+  obj.load("figure","四角形",col1,s/w)
+  obj.effect()
+  local l=s/2
+  local pir=math.pi*2/w
+  for i=0,w-1 do
+    x0=l*math.cos(pir*(i+1))
+    x1=l*math.cos(pir*i)
+    y0=l*math.sin(pir*(i+1))
+    y1=l*math.sin(pir*i)
+    table.insert(ocr_fd,{x0,-n/2,y0,x0,n/2,y0,x1,n/2,y1,x1,-n/2,y1})
+  end
+  ocr_fastdraw(ocr_fd)
+end
+
+if nn>0 then
+s,h=q*4,q*2
+for k=0,1 do
+  s=s-2*h*k
+  ocr_fd={}
+  obj.load("figure","四角形",col2,s/w)
+  l=s/2
+  p=360/w
+  local pip=math.pi/180*p
+  for i=0,w-1 do
+    x0=l*math.cos(pip*(i+1))
+    x1=l*math.cos(pip*i)
+    y0=l*math.sin(pip*(i+1))
+    y1=l*math.sin(pip*i)
+    table.insert(ocr_fd,{x0,0,y0,0,nn,0,0,nn,0,x1,0,y1})
+  end
+  ocr_fastdraw(ocr_fd)
+end
+end
+@Lollipop
+--track@r:半径,0,2000,150
+--track@ocr_t1:軸回転,-7200,7200,0
+--track@d:拡散,-2000,2000,0
+--track@nn:高さ,0,7200,0
+--color@col1:頭色,0x800080
+--color@col2:体色,0x800080
+--track@h:縦分割,2,120,12,1
+--track@w:横分割,3,120,24,1
+--value@alias:アンチエイリアス,1
+--check@head:バンドなし,0
+--track@stick:棒割合,0,100,10
+
+require("OCRuv")
+rotShift = math.rad(ocr_t1)
+q=r*stick/100
+
+  ocr_fd={}
+obj.load("figure","四角形",col1,r*2)
+--三角形ポリゴン問題を防ぐために最小でも0.1になるように内部で強制調整
+--（トラックで最小値を0.1としてもよいのだが、ドラッグで値を調整するときに
+--　数値にコンマ１がつくのもなんか気持ち悪いかなと思って。）
+minR = 0.1
+
+deltaH = math.rad(180/h)
+deltaW = math.rad(360/w)
+deltaU = obj.w/w
+deltaV = obj.h/h
+
+obj.setoption('antialias',alias)
+obj.effect()
+
+for y=0,h-1 do
+  rotH0 = deltaH*y
+  rotHC = rotH0 + deltaH/2
+  rotH1 = rotH0 + deltaH
+
+  yC = -d*math.cos(rotHC)
+  y0 = -r*math.cos(rotH0) + yC
+  y1 = -r*math.cos(rotH1) + yC
+
+  rC = d*math.sin(rotHC)
+
+  -- r0とr1をminRで下限制御
+  r0 = math.max( minR, (r*math.sin(rotH0)) )
+  r1 = math.max( minR, (r*math.sin(rotH1)) )
+
+  v0 = deltaV*y
+  v1 = deltaV*(y+1)
+
+  for x=0,w-1 do
+    rotW0= -deltaW*x + rotShift
+    rotWC = rotW0 - deltaW/2
+    rotW1 = rotW0 - deltaW
+
+    xC = rC*math.sin(rotWC)
+    zC = rC*math.cos(rotWC)
+
+    x0 = r0*math.sin(rotW0) + xC
+    x1 = r0*math.sin(rotW1) + xC
+    x2 = r1*math.sin(rotW1) + xC
+    x3 = r1*math.sin(rotW0) + xC
+    z0 = r0*math.cos(rotW0) + zC
+    z1 = r0*math.cos(rotW1) + zC
+    z2 = r1*math.cos(rotW1) + zC
+    z3 = r1*math.cos(rotW0) + zC
+    u0 = deltaU*x
+    u1 = deltaU*(x+1)
+    table.insert(ocr_fd,{x0,y0,z0,x1,y0,z1,x2,y1,z2,x3,y1,z3,u0,v0,u1,v0,u1,v1,u0,v1})
+  end
+end
+  obj.drawpoly(ocr_fd)
+
+if head==0 then
+--ライン
+s,n=(q+r)*2, r/h*8
+obj.load("figure","円",col1,s,q*4)
+obj.effect()
+x=obj.w/2
+y=obj.h/2
+obj.drawpoly(-x, n/2,-y,x, n/2,-y,x, n/2,y,-x, n/2,y)
+obj.drawpoly(-x,-n/2,-y,x,-n/2,-y,x,-n/2,y,-x,-n/2,y)
+
+  ocr_fd={}
+  obj.load("figure","四角形",col1,s/w)
+  obj.effect()
+  local l=s/2
+  local pir=math.p*2/w
+  for i=0,w-1 do
+    x0=l*math.cos(pir*(i+1))
+    x1=l*math.cos(pir*i)
+    y0=l*math.sin(pir*(i+1))
+    y1=l*math.sin(pir*i)
+    table.insert(ocr_fd,{x0,-n/2,y0,x0,n/2,y0,x1,n/2,y1,x1,-n/2,y1})
+  end
+  ocr_filluv(ocr_fd,obj)
+  obj.drawpoly(ocr_fd)
+end
+
+if nn>0 then
+s,h=q*4,q*2
+obj.load("figure","円",col2,s)
+obj.effect()
+x,y=obj.w/2,obj.h/2
+obj.drawpoly(-x, nn,-y,x, nn,-y,x, nn,y,-x, nn,y)
+for k=0,1 do
+  s=s-2*h*k
+  ocr_fd={}
+  obj.load("figure","四角形",col2,s/w)
+  l=s/2
+  p=360/w
+  local pip=math.pi/180*p
+  for i=0,w-1 do
+    x0=l*math.cos(pip*(i+1))
+    x1=l*math.cos(pip*i)
+    y0=l*math.sin(pip*(i+1))
+    y1=l*math.sin(pip*i)
+    table.insert(ocr_fd,{x0,0,y0,x0,nn,y0,x1,nn,y1,x1,0,y1})
+  end
+  ocr_filluv(ocr_fd,obj)
+  obj.drawpoly(ocr_fd)
+end
+end
+
+@立体図形(消しゴム系)
+--track@s:サイズ,1,1000,100,1
+--track@w:奥行き,1,500,20,1
+--track@ocr_t2:ライン幅,0,4000,4000,1
+--track@aspect:縦横比,-100,100,0
+--value@deg:角度(deg),0
+--color@col:縁色,0xffff00
+--color@col2:内部色,0xffff00
+h=math.min(ocr_t2,s/2)
+asx=math.max(aspect,0)
+asy=math.max(-aspect,0)
+
+require("OCRUtil")
+
+obj.setoption("drawtarget","tempbuffer",s,s)
+obj.load("figure","四角形",col2,s)
+obj.effect()
+x,y=obj.w/2,obj.h/2
+obj.drawpoly(-x,-y, 0,x,-y, 0,x,y, 0,-x,y, 0)
+--クリーム
+obj.load("figure","四角形",col,s,h)
+obj.drawpoly(-x,-y, 0,x,-y, 0,x,y, 0,-x,y, 0)
+obj.load("tempbuffer")
+obj.effect()
+
+obj.setoption("drawtarget","framebuffer")
+x0=s/2*(1-asx/100)
+y0=s/2*(1-asy/100)
+local dw,uw = anglepoint(0,0,deg/math.pi,s)
+uw = -dw
+--前後(上下別のzにずれ)
+obj.drawpoly(-x0,-y0, w/2+uw,x0,-y0, w/2+uw,x0,y0, w/2+dw,-x0,y0, w/2+dw)
+obj.drawpoly(-x0,-y0,-w/2+uw,x0,-y0,-w/2+uw,x0,y0,-w/2+dw,-x0,y0,-w/2+dw)
+--左右(上下別のzにずれ)
+obj.drawpoly( x0, y0,-w/2+dw, x0, y0,w/2+dw, x0,-y0,w/2+uw, x0,-y0,-w/2+uw)
+obj.drawpoly(-x0, y0,-w/2+dw,-x0, y0,w/2+dw,-x0,-y0,w/2+uw,-x0,-y0,-w/2+uw)
+--上下(同じzにずれ)
+obj.drawpoly(-x0, y0,-w/2+dw,-x0, y0,w/2+dw, x0, y0,w/2+dw, x0, y0,-w/2+dw)
+obj.drawpoly(-x0,-y0,-w/2+uw,-x0,-y0,w/2+uw, x0,-y0,w/2+uw, x0,-y0,-w/2+uw)
+
+@球フラスコ
+--information:球フラスコ【電球ボトルの一部】
+--track@r:半径基準,0,2000,150
+--track@r2:内幅率,0,100,80
+--track@qh:上部長さ,0,2000,0
+--track@ocr_t3:電球の穴,0,7200,0
+--color@col1:電球色,0x800080
+--color@col2:中身色,0x800080
+--track@h:縦分割,2,120,12,1
+--track@qw:横分割,3,120,24,1
+--check@alias:アンチエイリアス,1
+--check@inPat:ドリンク増量,0
+--check@cull:軽量化,0
+
+--三角形ポリゴン問題を防ぐために最小でも0.1になるように内部で強制調整
+--（トラックで最小値を0.1としてもよいのだが、ドラッグで値を調整するときに
+--　数値にコンマ１がつくのもなんか気持ち悪いかなと思って。）
+w = qw
+minR,minS = math.max( 0.1, ocr_t3 ),math.max( 0.1, ocr_t3 * r2/100 )
+
+deltaH,deltaW = math.rad(180/h),math.rad(360/w)
+deltaU,deltaV = obj.w/w,obj.h/h
+
+  ocr_fd={}
+obj.load("figure", "四角形", col1, r)
+obj.setoption("culling",cull)
+obj.setoption('antialias',alias)
+obj.effect("透明度","透明度",50)
+obj.effect()
+
+for y=0,h-1 do
+  rotH0 = deltaH*y
+  rotHC = rotH0 + deltaH/2
+  rotH1 = rotH0 + deltaH
+
+  yC = math.cos(rotHC)
+  y0 = -r*math.cos(rotH0) + yC
+  y1 = -r*math.cos(rotH1) + yC
+  local minQ = minR
+  if(yC<0) then minQ = 0.1 end
+
+  rC = math.sin(rotHC)
+
+  -- minRで上に穴をあける
+  r0 = math.max( minQ, (r*math.sin(rotH0)) )
+  r1 = math.max( minQ, (r*math.sin(rotH1)) )
+
+  v0,v1 = deltaV*y,deltaV*(y+1)
+
+  for x=0,w-1 do
+    rotW0= -deltaW*x
+    rotWC = rotW0 - deltaW/2
+    rotW1 = rotW0 - deltaW
+
+    xC = rC*math.sin(rotWC)
+    zC = rC*math.cos(rotWC)
+
+    x0 = r0*math.sin(rotW0) + xC
+    x1 = r0*math.sin(rotW1) + xC
+    x2 = r1*math.sin(rotW1) + xC
+    x3 = r1*math.sin(rotW0) + xC
+    z0 = r0*math.cos(rotW0) + zC
+    z1 = r0*math.cos(rotW1) + zC
+    z2 = r1*math.cos(rotW1) + zC
+    z3 = r1*math.cos(rotW0) + zC
+    u0,u1 = deltaU*x,deltaU*(x+1)
+    table.insert(ocr_fd,{x0,y0,z0,x1,y0,z1,x2,y1,z2,x3,y1,z3,u0,v0,u1,v0,u1,v1,u0,v1})
+  end
+end
+  obj.drawpoly(ocr_fd)
+h_inShift = 0
+-- ここはドリンク部分。
+if (r2 > 0) then
+local qr2,qr = r2 + (100 - r2)/2,r * qr2/100 --内側半径
+  ocr_fd={}
+  obj.load("figure", "四角形", col2, 1)
+  obj.setoption("culling",cull)
+  obj.setoption('antialias',1)
+  obj.effect()
+for y=0,h-1 do
+  rotH0 = deltaH*y
+  rotHC = rotH0 + deltaH/2
+  rotH1 = rotH0 + deltaH
+
+  yC = math.cos(rotHC)
+  y0 = -qr*math.cos(rotH0) + yC
+  y1 = -qr*math.cos(rotH1) + yC
+  local minQ = minS
+  if(yC<0) then minQ = 0.1 end
+
+  rC = math.sin(rotHC)
+
+  -- minRで上に穴をあける
+  r0 = math.max( minQ, (qr*math.sin(rotH0)) )
+  r1 = math.max( minQ, (qr*math.sin(rotH1)) )
+  if(r0 == r1 and h_inShift == 0) then h_inShift = math.min( y0, y1 ) end
+
+  v0,v1 = deltaV*y,deltaV*(y+1)
+
+  for x=0,w-1 do
+    rotW0= -deltaW*x
+    rotWC = rotW0 - deltaW/2
+    rotW1 = rotW0 - deltaW
+
+    xC = rC*math.sin(rotWC)
+    zC = rC*math.cos(rotWC)
+
+    x0 = r0*math.sin(rotW0) + xC
+    x1 = r0*math.sin(rotW1) + xC
+    x2 = r1*math.sin(rotW1) + xC
+    x3 = r1*math.sin(rotW0) + xC
+    z0 = r0*math.cos(rotW0) + zC
+    z1 = r0*math.cos(rotW1) + zC
+    z2 = r1*math.cos(rotW1) + zC
+    z3 = r1*math.cos(rotW0) + zC
+    u0,u1 = deltaU*x,deltaU*(x+1)
+    table.insert(ocr_fd,{x1,y0,z1,x0,y0,z0,x3,y1,z3,x2,y1,z2,u0,v0,u1,v0,u1,v1,u0,v1})
+  end
+end -- ドリンク球体部
+
+if inPat==1 then
+-- 二度手間になっちゃうけど再計算して描画する。
+y0 = -r-qh
+y1_in = h_inShift
+qr = minS
+  for i=0,w-1 do
+    d = math.fmod(i, div)
+    rot0 = -delta * d
+    rotC = rot0 - delta/2
+    rot1 = rot0 - delta
+
+    xC,zC = math.sin(rotC),math.cos(rotC)
+
+    x0_in = qr * math.sin(rot0) + xC
+    x1_in = qr * math.sin(rot1) + xC
+    z0_in = qr * math.cos(rot0) + zC
+    z1_in = qr * math.cos(rot1) + zC
+
+    -- 内側面
+    if r_in ~= 0 then
+      table.insert(ocr_fd,{x1_in,y0,z1_in, x0_in,y0,z0_in, x0_in,y1_in,z0_in, x1_in,y1_in,z1_in,  1,0, 0,0, 0,1, 1,1})
+    end
+  end
+end
+  obj.drawpoly(ocr_fd)
+end
+
+-- ======================================
+--　パラメータ初期化等
+-- ======================================
+
+y1 = -r+1
+y0 = y1-qh
+y1_in = h_inShift
+r = minR
+r_in = minS
+
+  ocr_fd={}
+obj.load("figure", "四角形", col1, r)
+obj.setoption("culling",cull)
+obj.setoption('antialias',alias)
+obj.effect("透明度","透明度",50)
+obj.effect()
+
+-- 左端から順に描いて行く
+
+delta = math.rad(360/qw)
+w = obj.w / qw
+
+for i=0,qw-1 do
+  d = math.fmod(i, qw)
+  rot0 = -delta * d
+  rotC = rot0 - delta/2
+  rot1 = rot0 - delta
+
+  xC = math.sin(rotC)
+  zC = math.cos(rotC)
+
+  x0 = r * math.sin(rot0) + xC
+  x1 = r * math.sin(rot1) + xC
+  z0 = r * math.cos(rot0) + zC
+  z1 = r * math.cos(rot1) + zC
+  x0_in = r_in * math.sin(rot0) + xC
+  x1_in = r_in * math.sin(rot1) + xC
+  z0_in = r_in * math.cos(rot0) + zC
+  z1_in = r_in * math.cos(rot1) + zC
+
+  px0 = w * d
+  px1 = w * (d+1)
+  py0 = 0
+  py1 = obj.h
+
+  -- 外径面
+  table.insert(ocr_fd,{x0,y0,z0, x1,y0,z1, x1,y1,z1, x0,y1,z0,  px0,py0, px1,py0, px1,py1, px0,py1})
+  -- 上蓋部分
+  table.insert(ocr_fd,{x0_in,y0,z0_in, x1_in,y0,z1_in, x1,y0,z1, x0,y0,z0,  px0,py0, px1,py0, px1,py0+1, px0,py0+1})
+end
+  obj.drawpoly(ocr_fd)
+@ソケット
+--information:ソケット【電球ボトルの一部】
+--track@r:半径基準,0,2000,150
+--track@r2:内幅率,0,100,50
+--track@h:柱部長さ,0,2000,0
+--track@ocr_t3:軸回転,-7200,7200,0
+--color@col1:色,0x800080
+--track@qht:縦分割,1,60,12,1
+--track@qw:横分割,3,120,24,1
+--check@alias:アンチエイリアス,1
+--check@cull:軽量化,0
+--value@bss:柱シフト,0
+
+rotShift = math.rad(ocr_t3)
+
+--三角形ポリゴン問題を防ぐために強制調整
+minR = 0.1
+qh = qht*2
+
+  ocr_fd={}
+obj.load("figure", "四角形", col1, r)
+obj.setoption("culling",cull)
+obj.setoption('antialias',alias)
+obj.effect()
+
+-- 左端から順に描いて行く
+
+r_in = r * r2/100 --内側半径
+delta = math.rad(360/div)
+w = obj.w / qw
+
+  y0,y1 = 0 + bss,h + bss
+
+for i=0,qw-1 do
+  d = math.fmod(i, qw)
+  rot0 = -delta * d + rotShift
+  rotC = rot0 - delta/2
+  rot1 = rot0 - delta
+
+  x0 = r * math.sin(rot0)
+  x1 = r * math.sin(rot1)
+  z0 = r * math.cos(rot0)
+  z1 = r * math.cos(rot1)
+  x0_in = r_in * math.sin(rot0)
+  x1_in = r_in * math.sin(rot1)
+  z0_in = r_in * math.cos(rot0)
+  z1_in = r_in * math.cos(rot1)
+
+  px0,px1 = w * d,w * (d+1)
+  py0,py1 = 0,obj.h
+
+  -- 外径面
+  table.insert(ocr_fd,{x0,y0,z0, x1,y0,z1, x1,y1,z1, x0,y1,z0,  px0,py0, px1,py0, px1,py1, px0,py1})
+  -- 上蓋部分
+  table.insert(ocr_fd,{x0_in,y0,z0_in, x1_in,y0,z1_in, x1,y0,z1, x0,y0,z0,  px0,py0, px1,py0, px1,py0+1, px0,py0+1})
+end
+  obj.drawpoly(ocr_fd)
+  ocr_fd={}
+
+r = r_in
+deltaH,deltaW = math.rad(180/qh),math.rad(360/qw)
+deltaU,deltaV = obj.w/qw,obj.h/qh
+d = 0
+
+obj.load("figure", "四角形", col1, r)
+obj.setoption("culling",cull)
+obj.setoption('antialias',alias)
+obj.effect()
+
+for y=0,qh-1 do
+  rotH0 = deltaH*y
+  rotHC = rotH0 + deltaH/2
+  rotH1 = rotH0 + deltaH
+
+  y0 = -r*math.cos(rotH0)
+  y1 = -r*math.cos(rotH1)
+
+  -- r0とr1をminRで下限制御
+  r0 = math.max( minR, (r*math.sin(rotH0)) )
+  r1 = math.max( minR, (r*math.sin(rotH1)) )
+
+  v0 = deltaV*y
+  v1 = deltaV*(y+1)
+
+  for x=0,qw-1 do
+    rotW0= -deltaW*x + rotShift
+    rotWC = rotW0 - deltaW/2
+    rotW1 = rotW0 - deltaW
+
+    x0 = r0*math.sin(rotW0)
+    x1 = r0*math.sin(rotW1)
+    x2 = r1*math.sin(rotW1)
+    x3 = r1*math.sin(rotW0)
+    z0 = r0*math.cos(rotW0)
+    z1 = r0*math.cos(rotW1)
+    z2 = r1*math.cos(rotW1)
+    z3 = r1*math.cos(rotW0)
+    u0 = deltaU*x
+    u1 = deltaU*(x+1)
+    table.insert(ocr_fd,{x0,y0,z0,x1,y0,z1,x2,y1,z2,x3,y1,z3,u0,v0,u1,v0,u1,v1,u0,v1})
+  end
+end
+  obj.drawpoly(ocr_fd)
+@TicTac(ケース)
+--track@s:サイズ,1,1000,100,1
+--track@w:奥行き,1,500,20,1
+--track@ocr_t2:ライン幅,0,4000,4000,1
+--track@aspect:縦横比,-100,100,0
+--color@col:色,0xffff00
+--check@futa:蓋,0
+--check@alias:アンチエイリアス,1
+h=math.min(ocr_t2,s/2)
+asx=math.max(aspect,0)
+asy=math.max(-aspect,0)
+
+obj.load("figure","四角形",col,s)
+obj.setoption('antialias',alias)
+obj.effect()
+
+x0=s/2*(1-asx/100)
+y0=s/2*(1-asy/100)
+z0=w/2
+--前後
+obj.drawpoly(x0,-y0,z0,-x0,-y0,z0,-x0,y0,z0,x0,y0,z0)
+obj.drawpoly(-x0,-y0,-z0,x0,-y0,-z0,x0,y0,-z0,-x0,y0,-z0)
+--左右
+obj.drawpoly(x0,y0,z0,x0,y0,-z0,x0,-y0,-z0,x0,-y0,z0)
+obj.drawpoly(-x0,y0,-z0,-x0,y0,z0,-x0,-y0,z0,-x0,-y0,-z0)
+--下
+obj.drawpoly(-x0,y0,z0,-x0,y0,-z0,x0,y0,-z0,x0,y0,z0)
+
+--上だけちょっと特殊
+if futa==1 then
+obj.load("figure","四角形",col,s,h)
+obj.setoption('antialias',alias)
+obj.effect()
+obj.drawpoly(-x0,-y0,-z0,-x0,-y0,z0, x0,-y0,z0, x0,-y0,-z0)
+end
+@TicTac(ケース蓋)
+--track@s:サイズ,1,1000,100,1
+--track@w:高さ,1,500,20,1
+--track@ocr_t2:ライン幅,0,4000,4000,1
+--track@aspect:縦横比,-100,100,0
+--color@col:色,0xffff00
+--value@ln:外幅,0
+--check@alias:アンチエイリアス,1
+h=math.min(ocr_t2,s/2)
+asx=math.max(aspect,0)
+asy=math.max(-aspect,0)
+
+obj.load("figure","四角形",col,s)
+obj.setoption('antialias',alias)
+obj.effect()
+
+x0=s/2*(1-asx/100)
+y0,y1,y2,y3=ln/2,ln/4,ln*2,w
+z0=s/2*(1-asy/100)
+x1,x2,x3,x4=math.max(x0-h,0),math.max(x0-h*3/2,0),x0+h/5,x0+h*2/5
+z1,z2,z3=math.max(z0-h,0),z0+h/5,math.max(z0-h*5/4,0)
+--y0からy3完成
+obj.drawpoly(-x3, y0, z2,-x3, y0,-z2,-x1, y0,-z1,-x1, y0, z1)
+obj.drawpoly( x1, y0, z1, x1, y0,-z1, x3, y0,-z2, x3, y0, z2)
+obj.drawpoly( x3, y0,-z2, x1, y0,-z1,-x1, y0,-z1,-x3, y0,-z2)
+obj.drawpoly( x1, y0, z1, x3, y0, z2,-x3, y0, z2,-x1, y0, z1)
+obj.drawpoly( x1, y0, z1,-x1, y0, z1,-x1, y2, z1, x1, y2, z1)
+obj.drawpoly(-x1, y0,-z1, x1, y0,-z1, x1, y2,-z1,-x1, y2,-z1)
+obj.drawpoly( x1, y2, z1,-x1, y2, z1,-x2, y3, z3, x2, y3, z3)
+obj.drawpoly(-x1, y2,-z1, x1, y2,-z1, x2, y3,-z3,-x2, y3,-z3)
+obj.drawpoly( x1, y0,-z1, x1, y0, z1, x1, y2, z1, x1, y2,-z1)
+obj.drawpoly(-x1, y0, z1,-x1, y0,-z1,-x1, y2,-z1,-x1, y2, z1)
+obj.drawpoly( x1, y2,-z1, x1, y2, z1, x2, y3, z3, x2, y3,-z3)
+obj.drawpoly(-x1, y2, z1,-x1, y2,-z1,-x2, y3,-z3,-x2, y3, z3)
+obj.drawpoly(-x2, y3, z3,-x2, y3,-z3, x2, y3,-z3, x2, y3, z3)
+
+--開閉部に近い部分
+obj.drawpoly(-x3, y0, z2,-x3,-y1, z2,-x3,-y1,-z2,-x3, y0,-z2)
+obj.drawpoly( x3, y0,-z2, x3,-y0,-z2, x3,-y0, z2, x3, y0, z2)
+obj.drawpoly( x3,-y1,-z2, x3, y0,-z2,-x3, y0,-z2,-x3,-y1,-z2)
+obj.drawpoly(-x3,-y1, z2,-x3, y0, z2, x3, y0, z2, x3,-y1, z2)
+
+obj.drawpoly( x3,-y0,-z2, x3,-y1,-z2,-x1,-y1,-z2,-x2,-y0,-z2)
+obj.drawpoly(-x2,-y0, z2,-x1,-y1, z2, x3,-y1, z2, x3,-y0, z2)
+obj.drawpoly(-x3,-y1,-z2,-x3,-y1, z2,-x1,-y1, z2,-x1,-y1,-z2)
+obj.drawpoly(-x1,-y1,-z2,-x1,-y1, z2,-x2,-y0, z2,-x2,-y0,-z2)
+obj.drawpoly(-x2,-y0,-z2,-x2,-y0, z2, x3,-y0, z2, x3,-y0,-z2)
+@TicTac(ケース開閉部)
+--track@s:サイズ,1,1000,100,1
+--track@w:シフト幅,1,500,20,1
+--track@ocr_t2:ライン幅,0,4000,4000,1
+--track@aspect:縦横比,-100,100,0
+--color@col:色,0xffff00
+--value@ln:外幅,0
+--check@alias:アンチエイリアス,1
+h=math.min(ocr_t2,s/2)
+asx=math.max(aspect,0)
+asy=math.max(-aspect,0)
+
+obj.load("figure","四角形",col,s)
+obj.setoption('antialias',alias)
+obj.effect()
+
+x1,y1=s/2*(1-asx/100)+h*12/5,ln/4
+z1=(s/2*(1-asy/100))/2+h
+w1,w2=w/2,-w/2
+
+--開閉部に近い部分
+obj.drawpoly( x1, y1,-z1, x1,-y1,-z1, x1,-y1, z1, x1, y1, z1)
+obj.drawpoly( x1,0,-z1, x1, y1,-z1,-w2, y1,-z1,-w1,0,-z1)
+obj.drawpoly(-w1,0, z1,-w2, y1, z1, x1, y1, z1, x1,0, z1)
+
+obj.drawpoly( x1,-y1,-z1, x1,0,-z1,-w1,0,-z1,-w2,-y1,-z1)
+obj.drawpoly(-w2,-y1, z1,-w1,0, z1, x1,0, z1, x1,-y1, z1)
+obj.drawpoly(w2,0,-z1,w2,0, z1,w1,-y1, z1,w1,-y1,-z1)
+obj.drawpoly(w1,-y1,-z1,w1,-y1, z1, x1,-y1, z1, x1,-y1,-z1)
+@TicTac(穴付き蓋)
+--track@s:サイズ,1,1000,100,1
+--track@w:高さ,1,500,20,1
+--track@ocr_t2:ライン幅,0,4000,4000,1
+--track@aspect:縦横比,-100,100,0
+--color@col:色,0xffff00
+--value@ln:外幅,0
+--value@sf:軸幅,0
+--check@alias:アンチエイリアス,1
+h=math.min(ocr_t2,s/2)
+asx=math.max(aspect,0)
+asy=math.max(-aspect,0)
+
+obj.load("figure","四角形",col,s)
+obj.setoption('antialias',alias)
+obj.effect()
+
+x0=s/2*(1-asx/100)
+y0,y1,y2,y3=ln/2,ln/4,ln*2,w
+z0=s/2*(1-asy/100)
+x1,x2,x3,x4=math.max(x0-h,0),math.max(x0-h*3/2,0),x0+h/5,x0+h*2/5
+z1,z2,z3=math.max(z0-h,0),z0+h/5,math.max(z0-h*5/4,0)
+
+x1,y1=s/2*(1-asx/100)+h*12/5,ln/4
+z1=(s/2*(1-asy/100))/2+h
+w1,w2=sf/2+h*2,-sf/2+h*2
+
+--開閉部に近い部分
+obj.drawpoly(-x3, y0, z2,-x3,-y1, z2,-x3,-y1,-z2,-x3, y0,-z2)
+obj.drawpoly( x3, y0,-z2, x3,-y0,-z2, x3,-y0, z2, x3, y0, z2)
+obj.drawpoly( x3,-y1,-z2, x3, y0,-z2,-x3, y0,-z2,-x3,-y1,-z2)
+obj.drawpoly(-x3,-y1, z2,-x3, y0, z2, x3, y0, z2, x3,-y1, z2)
+
+obj.drawpoly( x3,-y0,-z2, x3,-y1,-z2,-x1,-y1,-z2,-x2,-y0,-z2)
+obj.drawpoly(-x2,-y0, z2,-x1,-y1, z2, x3,-y1, z2, x3,-y0, z2)
+obj.drawpoly(-x3,-y1,-z2,-x3,-y1, z2,-x1,-y1, z2,-x1,-y1,-z2)
+obj.drawpoly(-x1,-y1,-z2,-x1,-y1, z2,-x2,-y0, z2,-x2,-y0,-z2)
+obj.drawpoly(-x2,-y0,-z2,-x2,-y0, z2, x3,-y0, z2, x3,-y0,-z2)

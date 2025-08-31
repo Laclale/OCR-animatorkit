@@ -1,21 +1,21 @@
 @サイドビュー
 --label:カスタム-OCR
---track@su:上円半径,0.5,500,100,0.1
---track@sd:下円半径,0.5,500,100,0.1
+--track@luh:上円半径,0.5,500,100,0.1
+--track@ldh:下円半径,0.5,500,100,0.1
 --track@sh:高さ,1,1000,100,1
 --track@drink:ドリンク量,0,1,0.75,0.01
 --color@col1:縁色,0x808000
 --color@col2:ドリンク色,0xffc880
 --value@line:ライン幅,10
 
+su=luh*2
+sd=ldh*2
 s1=math.min( su, sd )
 h=math.min( s1, line )
 s2=s1-h*2
 
-lu=su/2-h
-ld=sd/2-h
-luh=su/2
-ldh=sd/2
+lu=luh-h
+ld=ldh-h
 
 sud=su*drink+sd*(1-drink)
 shd=sh*drink
@@ -51,8 +51,8 @@ l=ldh
 obj.drawpoly(-l,0,l, l,0,l, l,0,-l, -l,0,-l, 0,0,sd,0,sd,sd,0,sd)
 @上下ビュー
 --label:カスタム-OCR
---track@su:上円半径,0.5,500,100,0.1
---track@sd:下円半径,0.5,500,100,0.1
+--track@luh:上円半径,0.5,500,100,0.1
+--track@ldh:下円半径,0.5,500,100,0.1
 --track@sh:高さ,1,1000,100,1
 --track@drink:ドリンク量,0,1,0.75,0.01
 --check@futi:横エッジ絵画,0
@@ -60,14 +60,14 @@ obj.drawpoly(-l,0,l, l,0,l, l,0,-l, -l,0,-l, 0,0,sd,0,sd,sd,0,sd)
 --color@col2:ドリンク色,0xffc880
 --value@line:ライン幅,10
 
+su=luh*2
+sd=ldh*2
 s1=math.min( su, sd )
 h=math.min( s1, line )
 s2=s1-h*2
 
-lu=su/2-h
-ld=sd/2-h
-luh=su/2
-ldh=sd/2
+lu=luh-h
+ld=ldh-h
 
 sud=su*drink+sd*(1-drink)
 shd=sh*drink

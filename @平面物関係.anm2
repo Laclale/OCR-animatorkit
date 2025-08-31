@@ -1,0 +1,310 @@
+@円形並べ-カメラX
+--track@n:個数,0,100,10,1
+--track@l:距離,0,2000,200
+--track@k_o:拡大率,0,800,100
+--track@rr:回転,-360,360,0
+--check@nrl:回転なし,0
+
+obj.effect()
+for i=0,n-1 do
+  r=360*i/n
+  x=math.sin(r*math.pi/180)*l*k
+  z=-math.cos(r*math.pi/180)*l*k
+  s=obj.zoom*k
+  ry=-360*i/n
+  rx=rr
+  if(nrl) then
+    rx=rx*0
+    ry=ry*0
+  end
+  obj.draw(x,0,z,s,1,rx,ry,0)
+end
+@月
+--track@Oprx:外X,-2000,2000,0
+--track@Oplx:中X,-2000,2000,0
+--track@Ops1:外サイズ,0,200,0
+--track@Ops2:中サイズ,0,200,0
+--color@clr:0x000000
+
+-- 仮想バッファサイズ計算
+w = math.max(obj.w+Oprx,obj.w+Oplx)
+obj.setoption("drawtarget","tempbuffer",w,Ops1)
+
+obj.load("figure","円",clr,Ops1)
+	obj.draw(Oprx,0,0)
+
+obj.load("figure","円",0x000000,Ops2)
+obj.setoption("blend","alpha_sub")
+	obj.draw(Oplx,0,0)
+
+obj.setoption("blend",0)
+obj.load("tempbuffer")
+obj.effect()
+obj.draw()
+
+@もごもご(口に追加)
+--track@Oprx:右X,0,200,0
+--track@Oplx:左X,0,200,0
+--track@Ops:サイズ,0,1000,0,1
+--track@Opl:ライン幅,0,4000,4000,1
+
+-- 仮想バッファサイズ計算
+obj.load("tempbuffer")
+w = obj.w*3+math.max(obj.w,math.max(Oprx,Oplx))
+h = obj.h+Ops
+obj.effect()
+obj.setoption("drawtarget","tempbuffer",w,h)
+obj.draw()
+
+obj.load("figure","円",0x000000,Ops)
+	if Oprx>Ops/10 then
+	obj.draw(Oprx,0,0)
+	end
+	if Oplx>Ops/10 then
+	obj.draw(-Oplx,0,0)
+	end
+
+if Ops>Opl then
+obj.setoption("blend","alpha_sub")
+	if Oprx>Ops/10 then
+	obj.draw(Oprx*1.2,0,0)
+	end
+	if Oplx>Ops/10 then
+	obj.draw(-Oplx*1.2,0,0)
+	end
+obj.load("figure","円",0x000000,Ops-Opl)
+obj.setoption("blend","alpha_sub")
+	if Oprx>Ops/10 then
+	obj.draw(Oprx,0,0)
+	end
+	if Oplx>Ops/10 then
+	obj.draw(-Oplx,0,0)
+	end
+end
+
+obj.setoption("blend",0)
+obj.load("tempbuffer")
+@カメラに対して平行
+--track@SEC:固定軸変更,0,2,0,1
+--track@ocr_t1:回転追加,-360,360,0
+--track@cmXt:横座標調節,-2000,2000,0
+--track@cmZt:縦座標調節,-2000,2000,0
+--check0:後向き,0
+
+cam = obj.getoption("camera_param") -- カメラデータの取得
+camr = 0
+cmX,cmY,cmZ = 0,0,0
+cmrad,cmXds,cmZds = 0,0,0
+cmX = cam.x - cam.tx
+cmY = cam.y - cam.ty
+cmZ = cam.z - cam.tz
+
+  if SEC==1 then
+    cmXds = cmY+cmXt
+    cmZds = cmX+cmZt
+  elseif SEC==2 then
+    cmXds = cmZ+cmXt
+    cmZds = cmX+cmZt
+  else
+    cmXds = cmX+cmXt
+    cmZds = cmZ+cmZt
+  end
+cmrad = math.atan2(cmZds,cmXds)
+if(obj.check0)then
+camr = math.deg(-cmrad + math.pi/2)
+else
+camr = math.deg(-cmrad + math.pi/2)-180
+end
+  if SEC==1 then
+    obj.rz = camr+90+ocr_t1
+  elseif SEC==2 then
+    obj.rx = camr-90+ocr_t1
+  else
+    obj.ry = camr+ocr_t1
+  end
+  
+@カメラに対して平行(口用)
+--track@SEC:固定軸変更,0,2,0,1
+--track@ocr_t1:回転追加,-360,360,0
+--track@cmXt:横座標調節,-2000,2000,0
+--track@cmZt:縦座標調節,-2000,2000,0
+
+cam = obj.getoption("camera_param") -- カメラデータの取得
+camr = 0
+cmX,cmY,cmZ = 0,0,0
+cmrad,cmXds,cmZds = 0,0,0
+cmX = cam.x - cam.tx
+cmY = cam.y - cam.ty
+cmZ = cam.z - cam.tz
+
+  if SEC==1 then
+    cmXds = cmY+cmXt
+    cmZds = cmX+cmZt
+  elseif SEC==2 then
+    cmXds = cmZ+cmXt
+    cmZds = cmX+cmZt
+  else
+    cmXds = cmX+cmXt
+    cmZds = cmZ+cmZt
+  end
+cmrad = math.atan2(cmZds,cmXds)
+
+camr = math.deg(-cmrad + math.pi/2)-180
+  if SEC==1 then
+    obj.rz = camr+90+ocr_t1
+  elseif SEC==2 then
+    obj.rx = camr-90+ocr_t1
+  else
+    obj.ry = camr+ocr_t1
+  end
+
+@中心変更
+--track@ocr_t0:X,-2000,2000,0
+--track@ocr_t1:Y,-2000,2000,0
+--track@ocr_t2:Z,-2000,2000,0
+local Opx=obj.ox
+local Opy=obj.oy
+local Opz=obj.oz
+local Ocx=obj.cx
+local Ocy=obj.cy
+local Ocz=obj.cz
+local Orx=ocr_t0 + Opx
+local Ory=ocr_t1 + Opy
+local Orz=ocr_t2 + Opz
+local Oqx=ocr_t0 + Ocx
+local Oqy=ocr_t1 + Ocy
+local Oqz=ocr_t2 + Ocz
+    obj.ox,obj.oy,obj.oz = obj.ox + Orx,obj.oy + Ory,obj.oz + Orz
+    obj.cx,obj.cy,obj.cz = obj.cx + Oqx,obj.cy + Oqy,obj.cz + Oqz
+@中心変更b
+--track@ocr_t0:X,-2000,2000,0
+--track@ocr_t1:Y,-2000,2000,0
+--track@ocr_t2:Z,-2000,2000,0
+local Opx=obj.ox
+local Opy=obj.oy
+local Opz=obj.oz
+local Ocx=obj.cx
+local Ocy=obj.cy
+local Ocz=obj.cz
+
+require("OCRUtil")
+
+  local Oqrx = math.rad(obj.rx)
+  local Oqry = math.rad(obj.ry)
+  local Oqrz = math.rad(obj.rz)
+local Orx,Ory,Orz = OCRRoll(Opx,Opy,Opz,Oqrx,Oqry,Oqrz)
+local Oqx,Oqy,Oqz = OCRRoll(Ocx,Ocy,Ocz,Oqrx,Oqry,Oqrz)
+local Orx=ocr_t0 + Orx
+local Ory=ocr_t1 + Ory
+local Orz=ocr_t2 + Orz
+local Oqx=ocr_t0 + Oqx
+local Oqy=ocr_t1 + Oqy
+local Oqz=ocr_t2 + Oqz
+    obj.ox,obj.oy,obj.oz = Orx,Ory,Orz
+    obj.cx,obj.cy,obj.cz = Oqx,Oqy,Oqz
+@回転移動
+--track0:X,-2000,2000,0
+--track1:Y,-2000,2000,0
+--track2:Z,-2000,2000,0
+--track3:回転,-360,360,0
+local Opx=obj.track0
+local Opy=obj.track1
+local Opz=obj.track2
+local Opr=obj.track3
+
+require("OCRUtil")
+  local Oqrx = math.rad(obj.rx)
+  local Oqry = math.rad(obj.ry)
+  local Oqrz = math.rad(obj.rz)
+local Oqx,Oqy,Oqz = OCRRoll(Opx,Opy,Opz,Oqrx,Oqry,Oqrz)
+    obj.ox,obj.oy,obj.oz,obj.rz = obj.ox + Oqx,obj.oy + Oqy,obj.oz + Oqz,obj.rz + Opr
+@別座標で回転
+--track@Opx:X,-2000,2000,0
+--track@Opy:Y,-2000,2000,0
+--track@Opz:Z,-2000,2000,0
+--track@Opr:回転,-360,360,0
+
+require("OCRUtil")
+  local Oqrx = math.rad(obj.rx)
+  local Oqry = math.rad(obj.ry)
+  local Oqrz = math.rad(obj.rz)
+local Oqx,Oqy,Oqz = OCRRoll(Opx,Opy,Opz,Oqrx,Oqry,Oqrz)
+    obj.cx,obj.cy,obj.cz,obj.rz = obj.cx + Oqx,obj.cy + Oqy,obj.cz + Oqz,obj.rz + Opr
+@数値反転
+--track@ocr_t0:軸変更,0,2,0,1
+--track@ocr_t1:反転率,0,100,0
+--track@ocr_t2:移動軸,0,2,0,1
+--track@mov:移動量,-2000,2000,0
+SEC=ocr_t0
+per=ocr_t1/50
+  if SEC==0 then
+    obj.ox = obj.ox-obj.ox*per
+    if per>=1.5 then
+      obj.ry = -obj.ry
+    end
+  end
+  if SEC==1 then
+    obj.oy = obj.oy-obj.oy*per
+    if per>=1.5 then
+      obj.rx = -obj.rx
+    end
+  end
+  if SEC==2 then
+    obj.oz = obj.oz-obj.oz*per
+    if per>=1.5 then
+      obj.rz = -obj.rz
+    end
+  end
+SEC=ocr_t2
+    if per>=1 then
+      per = 2-per
+    end
+  if SEC==0 then
+    obj.ox = obj.ox+mov*per
+  end
+  if SEC==1 then
+    obj.oy = obj.oy+mov*per
+  end
+  if SEC==2 then
+    obj.oz = obj.oz+mov*per
+  end
+@Snippers
+--track@ocr_t0:横,0,1280,640
+--track@ocr_t1:縦,0,1280,720
+--track@snipx:中心X,0,4000,0
+--track@snipy:中心Y,0,4000,0
+--check@snipc:移動せずに切り抜く,0
+local sizeW = ocr_t0/2
+local sizeH = ocr_t1/2
+local w = obj.w
+local h = obj.h
+clipU = snipy-sizeH
+clipD = h-snipy-sizeH
+clipL = snipx-sizeW
+clipR = w-snipx-sizeW
+obj.effect("クリッピング","上",math.max(0,clipU),"下",math.max(0,clipD),"左",math.max(0,clipL),"右",math.max(0,clipR),"中心の位置を変更",snipc and 1 or 0)
+if snipc then
+clipU = math.max(0,-clipU)
+clipD = math.max(0,-clipD)
+clipL = math.max(0,-clipL)
+clipR = math.max(0,-clipR)
+if(clipU+clipD+clipL+clipR)>0 then
+    obj.effect("領域拡張","上",clipU,"下",clipD,"左",clipL,"右",clipR)
+    obj.ox = obj.ox-clipL+clipR
+    obj.oy = obj.oy-clipU+clipD
+    end
+end
+
+@双方向斜めクリッピング(送信)
+--track@OCRClpangle:角度,0,360,0
+@双方向斜めクリッピング(送信＆実行)
+--track@OCRClpangle:角度,0,360,0
+obj.effect("斜めクリッピング","角度",OCRClpangle)
+@双方向斜めクリッピング(受信)
+--check@ocr_c:反転,0
+local Clpangle = OCRClpangle
+if(ocr_c)then
+Clpangle = Clpangle + 180
+end
+Clpangle = Clpangle % 360
+obj.effect("斜めクリッピング","角度",Clpangle)

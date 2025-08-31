@@ -1,0 +1,1836 @@
+@袋V2
+--track@rx:外側半径X,0,2000,150
+--track@r2x:内半径率X,0,100,50
+--track@ry:外側半径Y,0,2000,150
+--track@r2y:内半径率Y,0,100,50
+--track@rz:外側半径Z,0,2000,150
+--track@r2z:内半径率Z,0,100,50
+--track@rShpct:変形率,-100,100,0
+--track@rShtr:軸回転,-7200,7200,0
+--track@gst:重心,-100,100,0
+--track@divH:縦分割数,2,120,12,1
+--track@divW:横分割数,3,120,24,1
+--value@startHp:縦開始,0
+--value@endHp:縦終了,12
+--value@startWp:横開始,0
+--value@endWp:横終了,24
+--check@kiriPat:切り口の模様,0
+--color@kiriCol:切り口の色,0xffff00
+--check@inPat:内側の模様,0
+
+--
+-- ●内半径率　外側半径の何パーセントの地点を内側半径とするかを指定する。
+--　　100近くにすると外面と内面が重なって色が混ざることがあるので適宜調整を。
+-- ●開始・終了
+--　　　指定した分割数で分割した球を、どこからどこまで描くかという指定。
+--　　　縦（緯度）と横（経度）について、それぞれ開始番号と終了番号を指定する。
+--　　　縦はオブジェクトの一番上が１番、一番下がdivH番。
+--　　　横はオブジェクトの一番左が１番、一番右がdivW番。
+--　　　横については１番とdivW番をまたいで表示したいこともあると思うので、
+--　　　終了番号は１～divW*2の範囲で指定できる。例えば開始divW、divW+1とすると
+--　　　オブジェクトの一番右と一番左に相当する部分が表示される。
+--　　　なお、開始番号に０を指定した場合、カットは行なわない。
+--　　　また、
+--　　　　　　開始番号≦終了番号
+--　　　の関係を守って指定する必要がある。
+-- ●切り口の模様　0:オブジェクトの端を使う　1:「切り口の色」で指定した色にあわせる
+-- ●内側の模様　0:オブジェクトそのものを使う　1:「切り口の色」で指定した色にあわせる
+--
+-- ======================================
+--　パラメータ初期化等
+-- ======================================
+require("OCRuv")
+rotShift = math.rad(rShtr)
+gs = gst/100
+local rShpc = rShpct/100+1
+
+-- 横開始番号は0～divWの範囲に。
+-- 横終了番号は開始番号～divW*2-1の範囲に。
+startW = math.max(0, math.min(divW,startWp))
+endW = math.max(startW,math.min(divW*2-1,endWp))
+
+-- 縦開始番号は0～divHの範囲に。
+-- 縦終了番号は開始番号～divHの範囲に。
+startH = math.max(0, math.min(divH,startHp))
+endH = math.max(startH,math.min(divH,endHp))
+
+-- 開始番号に０を指定した場合は1～div番まで描けばよい
+if(startW==0) then
+  startW = 1
+  endW = divW
+end
+if(startH==0) then
+  startH = 1
+  endH = divH
+end
+
+-- 余分に重ねて描かないようにする。
+-- また、赤道方向に欠けがない場合は左右の切り口を描かないようにする。
+full = 0
+if ((endW-startW) >= (divW-1)) then
+  endW = startW + divW -1
+  full = 1
+end
+
+-- 三角形ポリゴン表裏問題対応のために極径下限を設ける
+-- ただ、これでも条件次第では表裏判定がおかしくなることもある模様。
+-- まあ「裏面を描画しない」にチェックを入れなければいいだけなので
+-- とりあえず対処はここまでにしておこう・・・。
+minR = 0.1
+--↓
+function velshift(a,b,c,d)--(y0,y1,iy0,iy1)
+  local a2,b2,c2,d2 = 0,0,0,0
+  local rsu,rsd = rShpc*(1+gs),rShpc*(1-gs)
+  if a>0 then
+    a2,c2 = a*rsu,c*rsu
+  else
+    a2,c2 = a*rsd,c*rsd
+  end
+  if b>0 then
+    b2,d2 = b*rsu,d*rsu
+  else
+    b2,d2 = b*rsd,d*rsd
+  end
+  --debug_print(string.format("rsu = %f, rsd = %f",rsu,rsd))
+  --debug_print(string.format("外 = %d %d, 内 = %d %d",a2,b2,c2,d2))
+  return a2,b2,c2,d2
+end
+
+r_inx = rx * r2x/100 --内側半径
+r_iny = ry * r2y/100
+r_inz = rz * r2z/100
+-- ======================================
+--　処理開始
+-- ======================================
+ocr_fd={}
+local ocr_fdIP,ocr_fdKP={},{}
+obj.setoption('antialias',1)
+obj.effect()
+function velUV(h,i)--(h,i)(h * i,h * (i+1))
+  local dh,rsu,rsd = divH/2,(1+gs),(1-gs)
+  local oh = h*dh*rsu
+  debug_print(string.format("oh = %f, dh = %f, rsu = %f, rsd = %f",oh,dh,rsu,rsd))
+  if i>=dh then
+  debug_print(string.format("h1 = %f, h2 = %f",oh+h*rsd*(i-dh),oh+h*rsd*(i+1-dh)))
+    return oh+h*rsd*(i-dh),oh+h*rsd*(i+1-dh)
+  elseif (i+1)>=dh then
+  debug_print(string.format("h1 = %f, h2 = %f",h*rsu*i,oh+h*rsd*(i+1-dh)))
+    return h*rsu*i,oh+h*rsd*(i+1-dh)
+  else
+  debug_print(string.format("h1 = %f, h2 = %f",h*rsu*i,h*rsu*(i+1)))
+    return h*rsu*i,h*rsu*(i+1)
+  end
+end
+
+-- 左上端から順に描いて行く
+deltaH = math.rad(180/divH)
+deltaW = math.rad(360/divW)
+w = obj.w / divW
+h = obj.h / divH
+
+for i = startH-1,endH-1 do
+
+  rotH0 = deltaH * i
+  rotH1 = rotH0 + deltaH
+  rotHC = rotH0 + deltaH/2
+
+  y0 = -ry * math.cos(rotH0)
+  y1 = -ry * math.cos(rotH1)
+  rx0 = math.max(minR, rx*math.sin(rotH0))
+  rx1 = math.max(minR, rx*math.sin(rotH1))
+  rz0 = math.max(minR, rz*math.sin(rotH0))
+  rz1 = math.max(minR, rz*math.sin(rotH1))
+
+  iy0 = -r_iny * math.cos(rotH0)
+  iy1 = -r_iny * math.cos(rotH1)
+  irx0 = math.max(minR, r_inx*math.sin(rotH0))
+  irx1 = math.max(minR, r_inx*math.sin(rotH1))
+  irz0 = math.max(minR, r_inz*math.sin(rotH0))
+  irz1 = math.max(minR, r_inz*math.sin(rotH1))
+  y0,y1,iy0,iy1 = velshift(y0,y1,iy0,iy1)
+
+  v0,v1 = velUV(h,i)
+
+  for j = startW-1,endW-1 do
+    d = math.mod(j, divW)
+    rotW0 = - deltaW * d + rotShift
+    rotW1 = rotW0 - deltaW
+    rotWC = rotW0 - deltaW/2
+
+    -- 外側
+    x0 = rx0 * math.sin(rotW0)
+    x1 = rx0 * math.sin(rotW1)
+    x2 = rx1 * math.sin(rotW1)
+    x3 = rx1 * math.sin(rotW0)
+    z0 = rz0 * math.cos(rotW0)
+    z1 = rz0 * math.cos(rotW1)
+    z2 = rz1 * math.cos(rotW1)
+    z3 = rz1 * math.cos(rotW0)
+
+    -- 内側
+    ix0 = irx0 * math.sin(rotW0)
+    ix1 = irx0 * math.sin(rotW1)
+    ix2 = irx1 * math.sin(rotW1)
+    ix3 = irx1 * math.sin(rotW0)
+    iz0 = irz0 * math.cos(rotW0)
+    iz1 = irz0 * math.cos(rotW1)
+    iz2 = irz1 * math.cos(rotW1)
+    iz3 = irz1 * math.cos(rotW0)
+
+    u0 = w * d
+    u1 = w * (d+1)
+
+    -- 外側面
+    table.insert(ocr_fd,{x0,y0,z0, x1,y0,z1, x2,y1,z2, x3,y1,z3, u0,v0, u1,v0, u1,v1, u0,v1})
+
+    -- 内側面
+    if (r2~=0) then
+      table.insert(ocr_fdIP,{ix1,iy0,iz1, ix0,iy0,iz0, ix3,iy1,iz3, ix2,iy1,iz2, u1,v0, u0,v0, u0,v1, u1,v1})
+    end
+
+    -- 内半径率r2がゼロだと切り口は三角形になるので、ポリゴン表裏問題対処のため
+    -- 頂点を1-1-2-3でdrawpolyに渡すよう意識する。
+    -- (minRで下限制御を入れたので問題ないかもしれないが念のため。)
+
+    -- 上面
+    if (i == startH-1) then
+      table.insert(ocr_fdKP,{ix0,iy0,iz0, ix1,iy0,iz1, x1,y0,z1, x0,y0,z0, u0,v0, u1,v0, u1,v0+1, u0,v0+1})
+    end
+
+    -- 下面
+    if (i == endH-1) then
+     table.insert(ocr_fdKP,{ix2,iy1,iz2, ix3,iy1,iz3, x3,y1,z3, x2,y1,z2,  u1,v1, u0,v1, u0,v1-1, u1,v1-1})
+    end
+
+    -- 左面
+    if ((full==0) and (j == startW-1)) then
+     table.insert(ocr_fdKP,{ix3,iy1,iz3, ix0,iy0,iz0, x0,y0,z0, x3,y1,z3,  u0,v1, u0,v0, u0+1,v0, u0+1,v1})
+    end
+
+    -- 右面
+    if ((full==0) and (j == endW-1)) then
+     table.insert(ocr_fdKP,{ix1,iy0,iz1, ix2,iy1,iz2, x2,y1,z2, x1,y0,z1,  u1,v0, u1,v1, u1-1,v1, u1-1,v0})
+    end
+  end -- end of for(j)
+end -- end of for(i)
+  obj.drawpoly(ocr_fd)
+if ((kiriPat == 0) and #ocr_fdKP>0) then
+  obj.drawpoly(ocr_fdKP)
+end
+if ((inPat == 0) and (r2~=0)) then
+  obj.drawpoly(ocr_fdIP)
+end
+-- 色指定で切り口を描く場合はobj.load()が必要になるので、
+-- 二度手間になっちゃうけど再計算して描画する。
+if ( (kiriPat == 1) or ((inPat == 1) and (r2~=0)) ) then
+  obj.load("figure", "四角形", kiriCol, 1)
+  obj.setoption('antialias',1)
+  obj.effect()
+if ((kiriPat == 1) and #ocr_fdKP>0) then
+  ocr_fixuv(ocr_fdKP,{0,0,1,0,1,1,0,1})
+  obj.drawpoly(ocr_fdKP)
+end
+if ((inPat == 1) and (r2~=0)) then
+  ocr_fixuv(ocr_fdIP,{0,0,1,0,1,1,0,1})
+  obj.drawpoly(ocr_fdIP)
+end
+end -- end of if(kiriPat)
+
+@袋
+--track@r:外側半径,0,2000,150
+--track@r2:内半径率,0,100,50
+--track@ocr_t2:変形率,-100,100,0
+--track@ocr_t3:重心,-100,100,0
+--dialog:縦分割数(2-120),divH=12;横分割数(3-120),divW=24;縦開始,startH=0;縦終了,endH=12;横開始,startW=0;横終了,endW=24;切り口の模様,kiriPat=0;切り口の色,kiriCol=0xffff00;内側の模様,inPat=0;
+
+-- ======================================
+--　パラメータ初期化等
+-- ======================================
+
+require("OCRuv")
+divW = math.max(3, math.min(120, math.floor(divW)))
+divH = math.max(2, math.min(120, math.floor(divH)))
+kiriPat = math.max(0, math.min(1, math.floor(kiriPat)))
+inPat = math.max(0, math.min(1, math.floor(inPat)))
+ocr_fd={}
+local ocr_fdIP,ocr_fdKP={},{}
+
+startW = math.max(0, math.min(divW,startW))
+endW = math.max(startW,math.min(divW*2-1,endW))
+
+startH = math.max(0, math.min(divH,startH))
+endH = math.max(startH,math.min(divH,endH))
+  debug_print("半径をXYZで指定できる袋V2もよろしく！")
+-- 開始番号に０を指定した場合は1～div番まで描けばよい
+if(startW==0) then
+  startW = 1
+  endW = divW
+end
+if(startH==0) then
+  startH = 1
+  endH = divH
+end
+
+-- 余分に重ねて描かないようにする。
+-- また、赤道方向に欠けがない場合は左右の切り口を描かないようにする。
+full = 0
+if ((endW-startW) >= (divW-1)) then
+  endW = startW + divW -1
+  full = 1
+end
+
+-- 三角形ポリゴン表裏問題対応のために極径下限を設ける
+-- ただ、これでも条件次第では表裏判定がおかしくなることもある模様。
+-- まあ「裏面を描画しない」にチェックを入れなければいいだけなので
+-- とりあえず対処はここまでにしておこう・・・。
+minR = 0.1
+--↓
+function velshift(a,b,c,d)--(y0,y1,iy0,iy1)
+  local a2,b2,c2,d2 = 0,0,0,0
+  local rsu,rsd = rotShift*(1+gs),rotShift*(1-gs)
+  if a>0 then
+    a2,c2 = a*rsu,c*rsu
+  else
+    a2,c2 = a*rsd,c*rsd
+  end
+  if b>0 then
+    b2,d2 = b*rsu,d*rsu
+  else
+    b2,d2 = b*rsd,d*rsd
+  end
+  --debug_print(string.format("rsu = %f, rsd = %f",rsu,rsd))
+  --debug_print(string.format("外 = %d %d, 内 = %d %d",a2,b2,c2,d2))
+  return a2,b2,c2,d2
+end
+
+-- ======================================
+--　処理開始
+-- ======================================
+obj.setoption('antialias',1)
+obj.effect()
+function velUV(h,i)--(h,i)(h * i,h * (i+1))
+  local dh,rsu,rsd = divH/2,(1+gs),(1-gs)
+  local oh = h*dh*rsu
+  if i>=dh then
+    return oh+h*rsd*(i-dh),oh+h*rsd*(i+1-dh)
+  elseif (i+1)>=dh then
+    return h*rsu*i,oh+h*rsd*(i+1-dh)
+  else
+    return h*rsu*i,h*rsu*(i+1)
+  end
+end
+
+-- 左上端から順に描いて行く
+r_in = r * r2/100 --内側半径
+deltaH = math.rad(180/divH)
+deltaW = math.rad(360/divW)
+w = obj.w / divW
+h = obj.h / divH
+
+for i = startH-1,endH-1 do
+
+  rotH0 = deltaH * i
+  rotH1 = rotH0 + deltaH
+
+  rotHC = rotH0 + deltaH/2
+
+  y0 = -r * math.cos(rotH0)
+  y1 = -r * math.cos(rotH1)
+  r0 = math.max(minR, r*math.sin(rotH0))
+  r1 = math.max(minR, r*math.sin(rotH1))
+
+  iy0 = -r_in * math.cos(rotH0)
+  iy1 = -r_in * math.cos(rotH1)
+  ir0 = math.max(minR, r_in*math.sin(rotH0))
+  ir1 = math.max(minR, r_in*math.sin(rotH1))
+  y0,y1,iy0,iy1 = velshift(y0,y1,iy0,iy1)
+
+  v0,v1 = velUV(h,i)
+
+  for j = startW-1,endW-1 do
+    d = math.mod(j, divW)
+    rotW0 = - deltaW * d
+    rotW1 = rotW0 - deltaW
+
+    rotWC = rotW0 - deltaW/2
+
+    -- 外側
+    x0 = r0 * math.sin(rotW0)
+    x1 = r0 * math.sin(rotW1)
+    x2 = r1 * math.sin(rotW1)
+    x3 = r1 * math.sin(rotW0)
+    z0 = r0 * math.cos(rotW0)
+    z1 = r0 * math.cos(rotW1)
+    z2 = r1 * math.cos(rotW1)
+    z3 = r1 * math.cos(rotW0)
+
+    -- 内側
+    ix0 = ir0 * math.sin(rotW0)
+    ix1 = ir0 * math.sin(rotW1)
+    ix2 = ir1 * math.sin(rotW1)
+    ix3 = ir1 * math.sin(rotW0)
+    iz0 = ir0 * math.cos(rotW0)
+    iz1 = ir0 * math.cos(rotW1)
+    iz2 = ir1 * math.cos(rotW1)
+    iz3 = ir1 * math.cos(rotW0)
+
+    u0 = w * d
+    u1 = w * (d+1)
+
+    -- 外側面
+    table.insert(ocr_fd,{x0,y0,z0, x1,y0,z1, x2,y1,z2, x3,y1,z3, u0,v0, u1,v0, u1,v1, u0,v1})
+
+    -- 内側面
+    if (r2~=0) then
+      table.insert(ocr_fdIP,{ix1,iy0,iz1, ix0,iy0,iz0, ix3,iy1,iz3, ix2,iy1,iz2, u1,v0, u0,v0, u0,v1, u1,v1})
+    end
+
+    -- 内半径率r2がゼロだと切り口は三角形になるので、ポリゴン表裏問題対処のため
+    -- 頂点を1-1-2-3でdrawpolyに渡すよう意識する。
+    -- (minRで下限制御を入れたので問題ないかもしれないが念のため。)
+
+    -- 上面
+    if (i == startH-1) then
+      table.insert(ocr_fdKP,{ix0,iy0,iz0, ix1,iy0,iz1, x1,y0,z1, x0,y0,z0, u0,v0, u1,v0, u1,v0+1, u0,v0+1})
+    end
+
+    -- 下面
+    if (i == endH-1) then
+     table.insert(ocr_fdKP,{ix2,iy1,iz2, ix3,iy1,iz3, x3,y1,z3, x2,y1,z2,  u1,v1, u0,v1, u0,v1-1, u1,v1-1})
+    end
+
+    -- 左面
+    if ((full==0) and (j == startW-1)) then
+     table.insert(ocr_fdKP,{ix3,iy1,iz3, ix0,iy0,iz0, x0,y0,z0, x3,y1,z3,  u0,v1, u0,v0, u0+1,v0, u0+1,v1})
+    end
+
+    -- 右面
+    if ((full==0) and (j == endW-1)) then
+     table.insert(ocr_fdKP,{ix1,iy0,iz1, ix2,iy1,iz2, x2,y1,z2, x1,y0,z1,  u1,v0, u1,v1, u1-1,v1, u1-1,v0})
+    end
+
+  end -- end of for(j)
+end -- end of for(i)
+      if ( (inPat == 0) and (r2~=0) ) then
+        ocr_fixuv(ocr_fdIP,{0,0,1,0,1,1,0,1})
+        obj.drawpoly(ocr_fdIP)
+      end
+      if ( (kiriPat == 0) and (#ocr_fdKP>0) ) then
+        ocr_fixuv(ocr_fdKP,{0,0,1,0,1,1,0,1})
+        obj.drawpoly(ocr_fdKP)
+      end
+-- 色指定で切り口を描く場合はobj.load()が必要になるので、
+-- 二度手間になっちゃうけど再計算して描画する。
+if ( (kiriPat == 1) or (inPat == 1) ) then
+  obj.load("figure", "四角形", kiriCol, 1)
+  obj.setoption('antialias',1)
+  obj.effect()
+      if ( (inPat == 1) and (r2~=0) ) then
+        obj.drawpoly(ocr_fdIP)
+      end
+      if ( (kiriPat == 1) and (#ocr_fdKP>0) ) then
+        obj.drawpoly(ocr_fdKP)
+      end
+end -- end of if(kiriPat)
+
+@ケーキ
+--
+-- 内側をくりぬいた角柱の、指定した部分だけを描画する。
+-- ホールのバウムクーヘンを等分して必要な部分だけ残すようなイメージ。
+-- N角柱を描く場合、多角柱はN個の三角柱に分割できるが、
+-- そのうちの何番目から何番目までを表示するかを指定できる。
+--
+--track@r2:内半径率,0,100,50
+--track@h_inShift:内軸シフト,-2000,2000,0
+--track@ocr_t2:軸回転,-7200,7200,0
+--track@r3:拡散,-2000,2000,0
+--dialog:半径,r=400;高さ,h=260;内側高さ,ih=150;角数(3-120),div=24;開始番号,startN=0;終了番号,endN=24;高さ基準,hBase=0;蓋の有無,futa=3;蓋の模様,futaPat=0;蓋の色/col,futaCol=0xffff00;内側の模様,kiriPat=0;内側の色/col,kiriCol=0xffff00;
+--
+-- ●開始番号・終了番号
+--　　　N角柱のどの部分を描画するかを指定する。
+--　　　オブジェクトの一番左側がマッピングされるものが１番目、
+--　　　一番右側がマッピングされるのがN番目。
+--　　　１番とN番をまたいで表示したいこともあると思うので、
+--　　　終了番号は１～２Nの範囲で指定する。例えば開始N、終了N+1とすると
+--　　　一番右と一番左の２つが表示される。
+--　　　なお、開始番号に０を指定した場合、カットは行なわない。
+--　　　また、
+--　　　　　　開始番号≦終了番号
+--　　　の関係を守って指定する必要がある。
+-- ●内側半径率　外側半径の何パーセントの地点を内側半径とするかを指定する。
+--　　100近くにすると外面と内面が重なって色が混ざることがあるので適宜調整を。
+-- ●内側軸シフト　内側の角柱の軸方向（Y方向）への移動量を指定する。
+-- ●高さ基準　0:中央基準 1:上基準　2:下基準
+-- ●蓋の有無　0:蓋なし　1:上のみ　2:下のみ　3:上下とも
+-- ●蓋の模様　0:オブジェクトの上端や下端を使う　1:「蓋の色」で指定した色
+-- ●切り口の模様　0:オブジェクトの端を使う　1:「切り口の色」で指定した色
+-- ●内側の模様　0:オブジェクトを使う　1:「切り口の色」で指定した色
+--
+-- ======================================
+--　パラメータ初期化等
+-- ======================================
+
+require("OCRuv")
+ocr_fd={}
+local ocr_fdFP,ocr_fdKP={},{}
+rotShift = math.rad(ocr_t2)
+
+r = math.max(0, math.min(1000, r))
+h = math.max(0, math.min(1000, h))
+ih = math.max(0, math.min(h-10, ih))
+div = math.max(3, math.min(120, math.floor(div)))
+hBase = math.max(0, math.min(2,math.floor(hBase)))
+futa = math.max(0, math.min(3, math.floor(futa)))
+futaPat = math.max(0, math.min(1, math.floor(futaPat)))
+kiriPat = math.max(0, math.min(1, math.floor(kiriPat)))
+
+startN = math.max(0, math.min(div,startN)) -- 開始番号は0～divの範囲に。
+endN = math.max(startN,math.min(div*2-1,endN)) -- 終了番号は開始番号～div*2-1の範囲に。
+
+-- 開始番号に０を指定した場合は1～div番まで描けばよい
+if(startN==0) then
+  startN = 1
+  endN = div
+end
+
+-- 余分に重ねて描かないようにする。
+-- また、欠けのない多角柱の場合は切り口を描かないようにする。
+full = 0
+if ((endN-startN) >= (div-1)) then
+  endN = startN + div -1
+  full = 1
+end
+
+-- ======================================
+--　処理開始
+-- ======================================
+obj.setoption('antialias',1)
+obj.effect()
+
+-- 左端から順に描いて行く
+
+r_in = r * r2/100 --内側半径
+delta = math.rad(360/div)
+w = obj.w / div
+
+y0 = -h/2
+y1 = -y0
+if (hBase==1) then
+  y0 = 0
+  y1 = h
+elseif(hBase==2) then
+  y0 = -h
+  y1 = 0
+end
+y0_in = y0 + h_inShift
+y1_in = y1 + h_inShift
+y0h = (h-ih)/2+y0
+y1h = -(h-ih)/2+y1
+y0_ih = y0h + h_inShift
+y1_ih = y1h + h_inShift
+
+for i=startN-1,endN-1 do
+  d = math.mod(i, div)
+  rot0 = -delta * d + rotShift
+  rotC = rot0 - delta/2
+  rot1 = rot0 - delta
+
+  xC = r3 * math.sin(rotC)
+  zC = r3 * math.cos(rotC)
+
+  x0 = r * math.sin(rot0) + xC
+  x1 = r * math.sin(rot1) + xC
+  z0 = r * math.cos(rot0) + zC
+  z1 = r * math.cos(rot1) + zC
+  x0_in = r_in * math.sin(rot0) + xC
+  x1_in = r_in * math.sin(rot1) + xC
+  z0_in = r_in * math.cos(rot0) + zC
+  z1_in = r_in * math.cos(rot1) + zC
+
+  px0 = w * d
+  px1 = w * (d+1)
+  py0 = 0
+  py1 = obj.h
+
+  -- 外径面
+  table.insert(ocr_fd,{x0,y0,z0, x1,y0,z1, x1,y1,z1, x0,y1,z0,  px0,py0, px1,py0, px1,py1, px0,py1})
+
+  -- オブジェクトの端を利用して蓋を描くならここで描く
+    -- 上蓋部分
+    if ((futa==1) or (futa==3)) then
+      table.insert(ocr_fdFP,{xC,y0_in,zC, xC,y0_in,zC, x1,y0,z1, x0,y0,z0,  px0,py0, px1,py0, px1,py0+1, px0,py0+1})
+    end
+    -- 下蓋部分
+    if ((futa==2) or (futa==3)) then
+      table.insert(ocr_fdFP,{xC,y1_in,zC, xC,y1_in,zC, x0,y1,z0, x1,y1,z1,  px1,py1, px0,py1, px0,py1-1, px1,py1-1})
+    end
+
+  -- オブジェクトの端を利用して切り口を描くならここで描く
+
+  -- 左面
+  if ( (r3 ~= 0) or (full==0) and (i == startN-1) ) then
+  	if (kiriPat == 0) then
+  	  table.insert(ocr_fd,{x0_in,y0_in,z0_in, x0,y0, z0, x0,y1, z0, x0_in,y1_in,z0_in,  px0,0, px0+1,0, px0+1,py1, px0,py1})
+  	else
+	  table.insert(ocr_fdKP,{xC,y0_ih,zC,x0_in,y0h,z0_in,x0_in,y1h,z0_in,xC,y1_ih,zC, 0,0, 1,0, 1,1, 0,1})
+  	  table.insert(ocr_fd,{xC,y0_in,zC, x0,y0, z0, x0,y1h,z0, xC,y1_ih,zC,  px0,0, px0+1,0, px0+1,py1, px0,py1})
+	  table.insert(ocr_fd,{x0_in,y0_ih,z0_in, x0,y0h,z0, x0,y1h,z0, x0_in,y1_ih,z0_in,  px0,0, px0+1,0, px0+1,py1, px0,py1})
+  	  table.insert(ocr_fd,{xC,y0_ih,zC, x0,y0h,z0, x0,y1, z0, xC,y1_in,zC,  px0,0, px0+1,0, px0+1,py1, px0,py1})
+  	end
+  end
+
+  -- 右面
+  if ( (r3 ~= 0) or (full==0) and (i == endN-1) ) then
+  	if (kiriPat == 0) then
+  	  table.insert(ocr_fd,{x1,y0, z1, x1_in,y0_in,z1_in, x1_in,y1_in,z1_in, x1,y1, z1,  px1-1,0, px1,0, px1,py1, px1-1,py1})
+  	else
+	  table.insert(ocr_fdKP,{x1_in,y0h,z1_in,xC,y0_ih,zC,xC,y1_ih,zC,x1_in,y1h,z1_in, 0,0, 1,0, 1,1, 0,1})
+  	  table.insert(ocr_fd,{x1,y0, z1, xC,y0_in,zC, xC,y1_ih,zC, x1,y1h,z1,  px1-1,0, px1,0, px1,py1, px1-1,py1})
+	  table.insert(ocr_fd,{x1,y0h,z1, x1_in,y0_ih,z1_in, x1_in,y1_ih,z1_in, x1,y1h,z1,  px1-1,0, px1,0, px1,py1, px1-1,py1})
+  	  table.insert(ocr_fd,{x1,y0h,z1, xC,y0_ih,zC, xC,y1_in,zC, x1,y1, z1,  px1-1,0, px1,0, px1,py1, px1-1,py1})
+  	end
+  end
+
+end
+  obj.drawpoly(ocr_fd)
+if ((futaPat == 0) and futa>0) then
+  obj.drawpoly(ocr_fdFP)
+end
+-- 色指定で切り口や内面を描く場合はobj.load()が必要になるので、
+-- 二度手間になっちゃうけど再計算して描画する。
+if ((kiriPat == 1) and (#ocr_fdKP>0)) then
+  obj.load("figure", "四角形", kiriCol, 1)
+  obj.setoption('antialias',1)
+  obj.effect()
+  obj.drawpoly(ocr_fdKP)
+end
+
+-- 色指定で蓋を描く場合はobj.load()が必要になるので、
+-- 二度手間になっちゃうけど再計算して描画する。
+if ((futaPat == 1) and futa>0) then
+  obj.load("figure", "四角形", futaCol, 1)
+  obj.setoption('antialias',1)
+  obj.effect()
+  ocr_fixuv(ocr_fdFP,{0,0,1,0,1,1,0,1})
+  obj.drawpoly(ocr_fdFP)
+end
+@Fanny羽
+--track@wr:羽半径,0,1000,100
+--track@sh:高さ,0,1000,300
+--track@ocr_t2:軸回転,-7200,7200,0
+--track@ocr_t3:羽角度,-360,360,0
+--dialog:外半径,rr1=150;内半径,rr2=150;羽の数(3-12),wing=4;角数(3-120),div=24;高さ基準,hBase=0;蓋の有無,futa=0;錘色/col,Col=0xffff00;
+-- ●高さ基準　0:中央基準 1:上基準　2:下基準
+-- ●蓋の有無　0:蓋なし　1:上のみ　2:下のみ　3:上下とも
+-- ●蓋の模様　0:オブジェクトの上端や下端を使う　1:「蓋の色」で指定した色
+--
+-- ======================================
+--　パラメータ初期化等
+-- ======================================
+
+--forループ内で使う変数をループの外に宣言します
+local r2, y0, y1, rot0,rot1,rotC,xC,zC,x01,x11,z01,z11,x02,x12,z02,z12
+
+rotShift = math.rad(ocr_t2)
+r3 = math.rad(ocr_t3)
+
+ow = obj.w/2
+oh = obj.h/2
+rr1 = math.max(0, rr1)
+rr2 = math.max(0, rr2)
+div = math.max(3, math.min(120,math.floor(div)))
+hBase = math.max(0, math.min(2,math.floor(hBase)))
+futa = math.max(0,math.min(3,math.floor(futa)))
+
+function APRoll(angle,dist)
+  local la = angle
+  if ( la == nil ) then
+    la = 0
+  end
+  local ar = math.rad(la)
+  local ld = dist
+  if ( ld == nil ) then
+    ld = 0
+  end
+  local px,py
+  px = math.sin(ar)*ld
+  py = math.cos(ar)*ld
+  return px,py
+end
+function APRoll2(px,py,pz,rx,ry,rz)
+  local OCRTx=((px*math.cos(ry)+pz*math.sin(ry))*math.cos(rz)-py*math.sin(rz))
+  local OCRTy=(px*math.sin(rz)+(py*math.cos(rx)-pz*math.sin(rx))*math.cos(rz))
+  local OCRTz=((py*math.sin(rx)-pz*math.cos(rx))*math.cos(ry)-px*math.sin(ry))
+  return OCRTx,OCRTy,OCRTz
+end
+
+-- ======================================
+--　羽の処理開始
+-- ======================================
+
+  local x0,y0,z0 = 0,0,-sh/2
+  local x1,y1,z1 = APRoll2(ow,wr+oh,0,0,r3,rotShift)
+  local x2,y2,z2 = APRoll2(-ow,wr+oh,0,0,r3,rotShift)
+  local x3,y3,z3 = APRoll2(-ow,wr-oh,0,0,r3,rotShift)
+  local x4,y4,z4 = APRoll2(ow,wr-oh,0,0,r3,rotShift)
+for i=0,wing-1 do
+  r2=math.rad(360/wing)
+  local ox1,oy1 = APRoll(0,wr)
+debug_print(string.format("x = %d, y = %d",ox1,oy1))
+  x1,y1,z1 = APRoll2(x1,y1,z1,0,0,r2)
+  x2,y2,z2 = APRoll2(x2,y2,z2,0,0,r2)
+  x3,y3,z3 = APRoll2(x3,y3,z3,0,0,r2)
+  x4,y4,z4 = APRoll2(x4,y4,z4,0,0,r2)
+  obj.drawpoly(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4)
+end
+
+-- ======================================
+--　錘の処理開始
+-- ======================================
+obj.load("figure", "四角形", Col, 1)
+obj.setoption('antialias',1)
+obj.effect()
+
+delta = math.rad(360/div)
+
+y0 = -sh/2
+y1 = sh/2
+if (hBase==1) then
+  y0 = 0
+  y1 = sh
+elseif(hBase==2) then
+  y0 = -sh
+  y1 = 0
+end
+
+for i=0,div-1 do
+  rot0 = -delta * i + rotShift
+  rot1 = rot0 - delta
+  rotC = rot0 - delta/2
+  xC = math.sin(rotC)
+  zC = math.cos(rotC)
+  x01 = rr1 * math.sin(rot0) + xC
+  x11 = rr1 * math.sin(rot1) + xC
+  z01 = rr1 * math.cos(rot0) + zC
+  z11 = rr1 * math.cos(rot1) + zC
+  x02 = rr2 * math.sin(rot0) + xC
+  x12 = rr2 * math.sin(rot1) + xC
+  z02 = rr2 * math.cos(rot0) + zC
+  z12 = rr2 * math.cos(rot1) + zC
+  -- まずは側面部分
+  obj.drawpoly(x11,z11,y0,x01,z01,y0,x02,z02,y1,x12,z12,y1)
+    -- 上蓋部分
+    if ((futa==1) or (futa==3)) then
+      obj.drawpoly(xC,zC,y0, xC,zC,y0, x11,z11,y0, x01,z01,y0)
+    end
+    -- 下蓋部分
+    if ((futa==2) or (futa==3)) then
+      obj.drawpoly(xC,zC,y1, xC,zC,y1, x02,z02,y1, x12,z12,y1)
+    end
+end
+
+@Fanny羽b
+--track@wr:羽半径,0,1000,100
+--track@sh:高さ,0,1000,300
+--track@ocr_t2:軸回転,-7200,7200,0
+--track@ocr_t3:羽角度,-360,360,0
+--dialog:外半径,rr1=150;内半径,rr2=150;羽の数(3-12),wing=4;角数(3-120),div=24;高さ基準,hBase=0;蓋の有無,futa=0;錘色/col,Col=0xffff00;c親番号[1-100],local c_num=nil;P親番号[1-100],local p_num=nil;Pｲﾝﾃﾞｯｸｽ,local index=nil;親非表示/chk,disa=0;子表示/chk,local disp=0;
+-- ●高さ基準　0:中央基準 1:上基準　2:下基準
+-- ●蓋の有無　0:蓋なし　1:上のみ　2:下のみ　3:上下とも
+-- ●蓋の模様　0:オブジェクトの上端や下端を使う　1:「蓋の色」で指定した色
+--
+-- ======================================
+--　パラメータ初期化等
+-- ======================================
+
+--していることは@C(子)と同じです
+require("rikky_parent_control")
+local child_info = r_parent_info[math.ceil(c_num)]
+if(child_info == nil) then
+	debug_print("info is null")
+end
+if child_info.disp then
+	r_P_C_DISP(math.ceil(c_num), "c")
+end
+obj.copybuffer("cache:P_C_C","obj")
+--child_infoの各要素をローカル変数に置き換える
+local zoom = child_info.zoom
+local alpha = child_info.alpha
+local pz = child_info.z
+local py = child_info.y
+local px = child_info.x
+local rz = child_info.rz
+local ry = child_info.ry
+local rx = child_info.rx
+
+--つける子供の情報を変数にコピーする
+local gx = obj.getvalue("x")
+local gy = obj.getvalue("y")
+local gz = obj.getvalue("z")
+local ox = gx+obj.ox
+local oy = gy+obj.oy
+local oz = gz+obj.oz
+
+--度数法を弧度法に変換します
+--math.radよりもpi_180をかける方が早いです
+local pi_180 = math.pi / 180
+local rrz = rz * pi_180
+local rry = ry * pi_180
+local rrx = rx * pi_180
+
+--何度も使うmath.cosとmath.sinをローカル変数にコピーして使います
+local cos = math.cos
+local sin = math.sin
+--各軸回転の三角比をあらかじめ用意
+local cosz = cos(rrz)
+local sinz = sin(rrz)
+local cosy = cos(rry)
+local siny = sin(rry)
+local cosx = cos(rrx)
+local sinx = sin(rrx)
+
+--p_numのデータ型が数値かテーブル型以外の場合はnilにします
+--また親番号は100以下なのでそれ以外の数値を指定した場合もnilにします
+if rikky_tpye(p_num) == "number" then
+	if p_num < 1 or 100 < p_num then
+		p_num = nil
+	else
+		p_num = {p_num}
+	end
+elseif rikky_tpye(p_num) == "table" then
+	local tmp = {}
+	local n = 0
+	local k
+	for i = 1, #p_num do
+		k = p_num[i]
+		if 0 < k and k < 101 then
+			n = n + 1
+			tmp[n] = k
+		end
+	end
+	if 0 < n then
+		for i = 1, n do
+			p_num[i] = tmp[i]
+		end
+	else
+		p_num = nil
+	end
+else
+	p_num = nil
+end
+--上の処理でp_numは数値かnilだけになったので、単純にnilかどうかの比較ができます
+--同じようにindexが数値かを調べます
+--人間は1から数えますが、コンピュータは0から数えるのでコンピュータ用にindexを合わせます
+--テーブルは宣言して、要素を入れるないとそこはnilつまりfalseになります
+if p_num ~= nil then
+	if rikky_tpye(index) == "number" then
+		index = index - 1
+		if index < 0 then
+			index = nil
+		else
+			local tmp = index
+			index = {}
+			index[tmp] = p_num[1]
+		end
+	elseif rikky_tpye(index) == "table" then
+		local tmp = {}
+		local n = 0
+		local k
+		for i = 1, #index do
+			k = index[i]
+			if rikky_tpye(k) == "number" and 0 < k then
+				n = n + 1
+				tmp[n] = k - 1
+			end
+		end
+		if 0 < n then
+			index = {}
+			n = math.min(#p_num, n)
+			for i = 1, n do
+				index[tmp[i]] = p_num[i]
+			end
+		else
+			index = nil
+		end
+	else
+		index = nil
+	end
+else
+	index = nil
+end
+--条件を変数にコピーすることも可能です
+local p_i_flag = p_num ~= nil and index ~= nil
+
+--元の各軸の角度をコピーしてその値を0にします
+local orax = obj.rx
+local oray = obj.ry
+local oraz = obj.rz
+obj.rx = 0
+obj.ry = 0
+obj.rz = 0
+
+--forループ内で使う変数をループの外に宣言します
+local r2, y0, y1, rot0,rot1,rotC,xC,zC,x01,x11,z01,z11,x02,x12,z02,z12
+
+
+--ここから描画を実行していきます
+--個別オブジェクトの場合はSとEが同じなのでループは一回、それ以外はnumの数だけループします
+
+	--DFが0のときobj.drawが使われないのでそれ用の処理をします
+		--相対位置を引いていないのは、obj.drawを使うので絶対的な位置の量で計算する必要があるからです
+		dx = ox * zoom
+		dy = oy * zoom
+		dz = oz * zoom
+		x1 = dx * cosz - dy * sinz
+		y1 = dx * sinz + dy * cosz
+		z1 = dz * cosy - x1 * siny
+		dx = dz * siny + x1 * cosy + px
+		dy = y1 * cosx - z1 * sinx + py
+		dz = y1 * sinx + z1 * cosx + pz
+		local rax, ray, raz=r_P_C_ROTATION(orax, oray, oraz, rx, ry, rz)
+		if p_i_flag and index[i] then
+			local N = index[i]
+			r_parent_info[N].x = dx
+			r_parent_info[N].y = dy
+			r_parent_info[N].z = dz
+			r_parent_info[N].rx = rax
+			r_parent_info[N].ry = ray
+			r_parent_info[N].rz = raz
+			r_parent_info[N].zoom = obj.zoom * zoom * obj.getvalue("zoom") * 0.01
+			r_parent_info[N].alpha = obj.alpha * alpha * obj.getvalue("alpha")
+			if disp == 1 then
+				r_parent_info[N].disp = true
+				r_P_C_DISP(N, "p")
+			else
+				r_parent_info[N].disp = false
+			end
+			if disp == 1 then
+				obj.copybuffer("obj","cache:P_C_C")
+			end
+		end
+	OCRRikkyx,OCRRikkyy,OCRRikkyz,OCRRikky = -gx + dx, -gy + dy, -gz + dz,1
+	OCRRikkyrx,OCRRikkyry,OCRRikkyrz = rax, ray, raz
+
+if rikky_module==nil then
+	local CPATH = {}
+	local cpath = package.cpath .. ";"
+	local n
+	while(1)do
+		n = cpath:find(";")
+		if n then
+			CPATH[#CPATH + 1] = cpath:sub(1, n - 1)
+			cpath = cpath:sub(n + 1, #cpath)
+		else
+			break
+		end
+	end
+	if not CPATH[2]:find("script\\?.dll") then
+		CPATH[3]=CPATH[2]:sub(1, CPATH[2]:find("\\script\\")) .. "script\\?.dll"
+		package.cpath = package.cpath .. ";" .. CPATH[3]
+	end
+	for i=1,#CPATH do
+		local f=io.open(CPATH[i]:gsub("?", "rikky_module"),"rb")
+		if f then
+			require("rikky_module")
+			f:close()
+			break
+		end
+	end
+end
+if rikky_module then
+rikky_module.setdialogparam("p_num",p_num)
+rikky_module.setdialogparam("index",index)
+end
+
+rotShift = math.rad(ocr_t2)
+r3 = math.rad(ocr_t3)
+
+ow = obj.w/2
+oh = obj.h/2
+rr1 = math.max(0, rr1)
+rr2 = math.max(0, rr2)
+div = math.max(3, math.min(120,math.floor(div)))
+hBase = math.max(0, math.min(2,math.floor(hBase)))
+futa = math.max(0,math.min(3,math.floor(futa)))
+
+function APRoll(angle,dist)
+  local la = angle
+  if ( la == nil ) then
+    la = 0
+  end
+  local ar = math.rad(la)
+  local ld = dist
+  if ( ld == nil ) then
+    ld = 0
+  end
+  local px,py
+  px = math.sin(ar)*ld
+  py = math.cos(ar)*ld
+  return px,py
+end
+function APRoll2(px,py,pz,rx,ry,rz)
+  local OCRTx=((px*math.cos(ry)+pz*math.sin(ry))*math.cos(rz)-py*math.sin(rz))
+  local OCRTy=(px*math.sin(rz)+(py*math.cos(rx)-pz*math.sin(rx))*math.cos(rz))
+  local OCRTz=((py*math.sin(rx)-pz*math.cos(rx))*math.cos(ry)-px*math.sin(ry))
+  return OCRTx,OCRTy,OCRTz
+end
+
+-- ======================================
+--　羽の処理開始
+-- ======================================
+
+  local x0,y0,z0 = OCRRikkyx,OCRRikkyy,OCRRikkyz-sh/2
+  local x1,y1,z1 = APRoll2(ow,wr+oh,0,0,r3,rotShift)
+  local x2,y2,z2 = APRoll2(-ow,wr+oh,0,0,r3,rotShift)
+  local x3,y3,z3 = APRoll2(-ow,wr-oh,0,0,r3,rotShift)
+  local x4,y4,z4 = APRoll2(ow,wr-oh,0,0,r3,rotShift)
+for i=0,wing-1 do
+  r2=math.rad(360/wing)
+  local ox1,oy1 = APRoll(0,wr)
+debug_print(string.format("x = %d, y = %d",ox1,oy1))
+  x1,y1,z1 = APRoll2(x1,y1,z1,0,0,r2)
+  x2,y2,z2 = APRoll2(x2,y2,z2,0,0,r2)
+  x3,y3,z3 = APRoll2(x3,y3,z3,0,0,r2)
+  x4,y4,z4 = APRoll2(x4,y4,z4,0,0,r2)
+  local x1a,y1a,z1a = APRoll2(x0+x1,y0+y1,z0+z1,OCRRikkyrx,OCRRikkyrz,OCRRikkyry)
+  local x2a,y2a,z2a = APRoll2(x0+x2,y0+y2,z0+z2,OCRRikkyrx,OCRRikkyrz,OCRRikkyry)
+  local x3a,y3a,z3a = APRoll2(x0+x3,y0+y3,z0+z3,OCRRikkyrx,OCRRikkyrz,OCRRikkyry)
+  local x4a,y4a,z4a = APRoll2(x0+x4,y0+y4,z0+z4,OCRRikkyrx,OCRRikkyrz,OCRRikkyry)
+  obj.drawpoly(x1a,y1a,z1a,x2a,y2a,z2a,x3a,y3a,z3a,x4a,y4a,z4a)
+end
+
+-- ======================================
+--　錘の処理開始
+-- ======================================
+obj.load("figure", "四角形", Col, 1)
+obj.setoption('antialias',1)
+obj.effect()
+
+delta = math.rad(360/div)
+
+y0 = OCRRikkyz-sh/2
+y1 = OCRRikkyz+sh/2
+if (hBase==1) then
+  y0 = OCRRikkyz
+  y1 = OCRRikkyz+sh
+elseif(hBase==2) then
+  y0 = OCRRikkyz-sh
+  y1 = OCRRikkyz
+end
+
+for i=0,div-1 do
+  rot0 = -delta * i + rotShift
+  rot1 = rot0 - delta
+  rotC = rot0 - delta/2
+  xC = OCRRikkyx + math.sin(rotC)
+  zC = OCRRikkyy + math.cos(rotC)
+  x01 = rr1 * math.sin(rot0) + xC
+  x11 = rr1 * math.sin(rot1) + xC
+  z01 = rr1 * math.cos(rot0) + zC
+  z11 = rr1 * math.cos(rot1) + zC
+  x02 = rr2 * math.sin(rot0) + xC
+  x12 = rr2 * math.sin(rot1) + xC
+  z02 = rr2 * math.cos(rot0) + zC
+  z12 = rr2 * math.cos(rot1) + zC
+  -- まずは側面部分
+  obj.drawpoly(x01,z01,y0, x11,z11,y0, x12,z12,y1, x02,z02,y1)
+    -- 上蓋部分
+    if ((futa==1) or (futa==3)) then
+      obj.drawpoly(xC,zC,y0, xC,zC,y0, x11,z11,y0, x01,z01,y0)
+    end
+    -- 下蓋部分
+    if ((futa==2) or (futa==3)) then
+      obj.drawpoly(xC,zC,y1, xC,zC,y1, x02,z02,y1, x12,z12,y1)
+    end
+end
+@つぶれ球体V2
+--track@rx:外側半径X,0,2000,150
+--track@ry:外側半径Y,0,2000,150
+--track@rz:外側半径Z,0,2000,150
+--track@rShtr:軸回転,-7200,7200,0
+--track@d:拡散,-2000,2000,0
+--track@divH:縦分割数,2,120,12,1
+--track@divW:横分割数,3,120,24,1
+
+-- ======================================
+--　パラメータ初期化等
+-- ======================================
+rotShift = math.rad(rShtr)
+
+-- 横開始番号は0～divWの範囲に。
+-- 横終了番号は開始番号～divW*2-1の範囲に。
+startW = math.max(0, math.min(divW,startWp))
+endW = math.max(startW,math.min(divW*2-1,endWp))
+
+-- 縦開始番号は0～divHの範囲に。
+-- 縦終了番号は開始番号～divHの範囲に。
+startH = math.max(0, math.min(divH,startHp))
+endH = math.max(startH,math.min(divH,endHp))
+
+-- 開始番号に０を指定した場合は1～div番まで描けばよい
+if(startW==0) then
+  startW = 1
+  endW = divW
+end
+if(startH==0) then
+  startH = 1
+  endH = divH
+end
+
+-- 余分に重ねて描かないようにする。
+-- また、赤道方向に欠けがない場合は左右の切り口を描かないようにする。
+full = 0
+if ((endW-startW) >= (divW-1)) then
+  endW = startW + divW -1
+  full = 1
+end
+
+-- 三角形ポリゴン表裏問題対応のために極径下限を設ける
+-- ただ、これでも条件次第では表裏判定がおかしくなることもある模様。
+-- まあ「裏面を描画しない」にチェックを入れなければいいだけなので
+-- とりあえず対処はここまでにしておこう・・・。
+minR = 0.1
+--↓
+
+-- ======================================
+--　処理開始
+-- ======================================
+ocr_fd={}
+obj.setoption('antialias',1)
+obj.effect()
+
+-- 左上端から順に描いて行く
+deltaH = math.rad(180/divH)
+deltaW = math.rad(360/divW)
+w = obj.w / divW
+h = obj.h / divH
+
+for i = 0,divH-1 do
+
+  rotH0 = deltaH * i
+  rotH1 = rotH0 + deltaH
+  rotHC = rotH0 + deltaH/2
+  rC =  d*math.sin(rotHC)
+
+  yC = -d*math.cos(rotHC)
+  y0 = -ry*math.cos(rotH0) + yC
+  y1 = -ry*math.cos(rotH1) + yC
+  rx0 = math.max(minR, rx*math.sin(rotH0))
+  rx1 = math.max(minR, rx*math.sin(rotH1))
+  rz0 = math.max(minR, rz*math.sin(rotH0))
+  rz1 = math.max(minR, rz*math.sin(rotH1))
+
+  v0 = h*i
+  v1 = h*(i+1)
+
+  for j = 0,divW-1 do
+    d = math.mod(j, divW)
+    rotW0 = - deltaW * d + rotShift
+    rotW1 = rotW0 - deltaW
+    rotWC = rotW0 - deltaW/2
+
+    xC = rC*math.sin(rotWC)
+    zC = rC*math.cos(rotWC)
+
+    -- 外側
+    x0 = rx0 * math.sin(rotW0) + xC
+    x1 = rx0 * math.sin(rotW1) + xC
+    x2 = rx1 * math.sin(rotW1) + xC
+    x3 = rx1 * math.sin(rotW0) + xC
+    z0 = rz0 * math.cos(rotW0) + zC
+    z1 = rz0 * math.cos(rotW1) + zC
+    z2 = rz1 * math.cos(rotW1) + zC
+    z3 = rz1 * math.cos(rotW0) + zC
+
+    u0 = w * j
+    u1 = w * (j+1)
+
+    -- 外側面
+    table.insert(ocr_fd,{x0,y0,z0, x1,y0,z1, x2,y1,z2, x3,y1,z3, u0,v0, u1,v0, u1,v1, u0,v1})
+
+  end -- end of for(j)
+end -- end of for(i)
+  obj.drawpoly(ocr_fd)
+
+@つぶれ球体
+--information:つぶれ球体【使用不可】
+--track@r:半径,0,2000,150
+--track@ocr_t1:つぶれ,0,100,50
+--track@ocr_t2:軸回転,-7200,7200,0
+--track@d:拡散,-2000,2000,0
+--dialog:縦分割数(2-120),divH=12;横分割数(3-120),divW=24;アンチエイリアス,alias=1;
+--
+-- ●内半径率　外側半径の何パーセントの地点を内側半径とするかを指定する。
+--　　100近くにすると外面と内面が重なって色が混ざることがあるので適宜調整を。
+-- ●開始・終了
+--　　　指定した分割数で分割した球を、どこからどこまで描くかという指定。
+--　　　縦（緯度）と横（経度）について、それぞれ開始番号と終了番号を指定する。
+--　　　縦はオブジェクトの一番上が１番、一番下がdivH番。
+--　　　横はオブジェクトの一番左が１番、一番右がdivW番。
+--　　　横については１番とdivW番をまたいで表示したいこともあると思うので、
+--　　　終了番号は１～divW*2の範囲で指定できる。例えば開始divW、divW+1とすると
+--　　　オブジェクトの一番右と一番左に相当する部分が表示される。
+--　　　なお、開始番号に０を指定した場合、カットは行なわない。
+--　　　また、
+--　　　　　　開始番号≦終了番号
+--　　　の関係を守って指定する必要がある。
+-- ●切り口の模様　0:オブジェクトの端を使う　1:「切り口の色」で指定した色にあわせる
+-- ●内側の模様　0:オブジェクトそのものを使う　1:「切り口の色」で指定した色にあわせる
+--
+-- ======================================
+--　パラメータ初期化等
+-- ======================================
+
+local zz = 1-ocr_t1/100
+local rotShift = math.rad(ocr_t2)
+
+local divW = math.max(3, math.min(120, math.floor(divW)))
+local divH = math.max(2, math.min(120, math.floor(divH)))
+
+local xdp,ydp,zdp = r,r,r
+    ydp = ydp*zz
+
+debug_print(string.format("つぶれ球体V2を使ってね。半径X,半径Y,半径Z = %f, %f, %f",xdp,ydp,zdp))
+
+@円柱球体
+--information:円柱球体【使用不可】
+--track@r:半径,0,2000,150
+--track@ocr_t1:幅半径率,0,100,50
+--track@ocr_t2:軸回転,-7200,7200,0
+--track@d:拡散,-2000,2000,0
+--dialog:縦分割数(2-120),divH=12;横分割数(3-120),divW=24;アンチエイリアス,alias=1;
+
+-- ======================================
+--　パラメータ初期化等
+-- ======================================
+
+local zz = ocr_t1/100
+local rotShift = math.rad(ocr_t2)
+
+local divW = math.max(3, math.min(120, math.floor(divW)))
+local divH = math.max(2, math.min(120, math.floor(divH)))
+local xdp,ydp,zdp = r,r,r
+  xdp = xdp*zz
+  zdp = zdp*zz
+
+debug_print(string.format("つぶれ球体V2を使ってね。半径X,半径Y,半径Z = %f, %f, %f",xdp,ydp,zdp))
+
+@つぶれ円柱球体
+--information:つぶれ円柱球体【使用不可】
+--track@r:半径,0,2000,150
+--track@ocr_t1:幅半径率,0,100,50
+--track@ocr_t2:軸回転,-7200,7200,0
+--track@ocr_t3:つぶれ,0,100,50
+--dialog:縦分割数(2-120),divH=12;横分割数(3-120),divW=24;アンチエイリアス,alias=1;つぶれ軸,ax=1;拡散,d=0;
+
+-- ======================================
+--　パラメータ初期化等
+-- ======================================
+
+local zz = ocr_t1/100
+local rotShift = math.rad(ocr_t2)
+local xx = ocr_t3/100
+
+local divW = math.max(3, math.min(120, math.floor(divW)))
+local divH = math.max(2, math.min(120, math.floor(divH)))
+
+local xdp,ydp,zdp = r,r,r
+  if ax == 1 then
+    ydp = ydp*xx
+  end
+  xdp = xdp*zz
+  zdp = zdp*zz
+	if ax == 2 then
+	  xdp = xdp*xx
+	elseif ax == 3 then
+	  zdp = zdp*xx
+	end
+
+debug_print(string.format("つぶれ球体V2を使ってね。半径X,半径Y,半径Z = %f, %f, %f",xdp,ydp,zdp))
+
+@つぶれ円柱カット
+--information:つぶれ円柱カット【使用不可】
+--track@r:外側半径,0,2000,150
+--track@ocr_t1:幅半径率,0,100,50
+--track@ocr_t2:軸回転,-7200,7200,0
+--track@ocr_t3:つぶれ,0,100,50
+--dialog:縦分割数(2-120),divH=12;横分割数(3-120),divW=24;縦開始,startH=0;縦終了,endH=12;横開始,startW=0;横終了,endW=24;切り口の模様,kiriPat=0;切り口の色,kiriCol=0xffff00;つぶれ軸,ax=1;
+
+-- ======================================
+--　パラメータ初期化等
+-- ======================================
+
+local zz = ocr_t1/100
+local xx = ocr_t3/100
+
+divW = math.max(3, math.min(120, math.floor(divW)))
+divH = math.max(2, math.min(120, math.floor(divH)))
+kiriPat = math.max(0, math.min(1, math.floor(kiriPat)))
+ax = math.max(0, math.min(3, math.floor(ax)))
+
+-- 横開始番号は0～divWの範囲に。
+-- 横終了番号は開始番号～divW*2-1の範囲に。
+startW = math.max(0, math.min(divW,startW))
+endW = math.max(startW,math.min(divW*2-1,endW))
+
+-- 縦開始番号は0～divHの範囲に。
+-- 縦終了番号は開始番号～divHの範囲に。
+startH = math.max(0, math.min(divH,startH))
+endH = math.max(startH,math.min(divH,endH))
+
+-- ======================================
+--　処理開始
+-- ======================================
+local xdp,ydp,zdp = r,r,r
+  if ax == 1 then
+    ydp = ydp*xx
+  end
+  xdp = xdp*zz
+  zdp = zdp*zz
+	if ax == 2 then
+	  xdp = xdp*xx
+	elseif ax == 3 then
+	  zdp = zdp*xx
+	end
+
+debug_print(string.format("袋V2を使ってね。半径X,半径Y,半径Z = %f, %f, %f",xdp,ydp,zdp))
+
+@フィンの帽子
+--track@r:外側半径,0,2000,150
+--track@r2:内半径率,0,100,50
+--track@ocr_t2:軸回転,-7200,7200,0
+--track@r3:拡散,-2000,2000,0
+--track@divH:縦分割数,2,120,12,1
+--track@divW:横分割数,3,120,24,1
+--value@startHp:縦開始,0
+--value@endHp:縦終了,12
+--value@startWp:横開始,0
+--value@endWp:横終了,24
+--check@kiriPat:切り口の模様,0
+--color@kiriCol:切り口の色,0xffff00
+--check@inPat:内側の模様,0
+--
+-- 内側をくりぬいた球の、指定した部分だけを描画する。
+--
+-- ●内半径率　外側半径の何パーセントの地点を内側半径とするかを指定する。
+--　　100近くにすると外面と内面が重なって色が混ざることがあるので適宜調整を。
+-- ●開始・終了
+--　　　指定した分割数で分割した球を、どこからどこまで描くかという指定。
+--　　　縦（緯度）と横（経度）について、それぞれ開始番号と終了番号を指定する。
+--　　　縦はオブジェクトの一番上が１番、一番下がdivH番。
+--　　　横はオブジェクトの一番左が１番、一番右がdivW番。
+--　　　横については１番とdivW番をまたいで表示したいこともあると思うので、
+--　　　終了番号は１～divW*2の範囲で指定できる。例えば開始divW、divW+1とすると
+--　　　オブジェクトの一番右と一番左に相当する部分が表示される。
+--　　　なお、開始番号に０を指定した場合、カットは行なわない。
+--　　　また、
+--　　　　　　開始番号≦終了番号
+--　　　の関係を守って指定する必要がある。
+-- ●切り口の模様　0:オブジェクトの端を使う　1:「切り口の色」で指定した色にあわせる
+-- ●内側の模様　0:オブジェクトそのものを使う　1:「切り口の色」で指定した色にあわせる
+--
+-- ======================================
+--　パラメータ初期化等
+-- ======================================
+
+require("OCRuv")
+rotShift = math.rad(ocr_t2)
+
+-- 横開始番号は0～divWの範囲に。
+-- 横終了番号は開始番号～divW*2-1の範囲に。
+startW = math.max(0, math.min(divW,startWp))
+endW = math.max(startW,math.min(divW*2-1,endWp))
+
+-- 縦開始番号は0～divHの範囲に。
+-- 縦終了番号は開始番号～divHの範囲に。
+startH = math.max(0, math.min(divH,startHp))
+endH = math.max(startH,math.min(divH,endHp))
+
+-- 開始番号に０を指定した場合は1～div番まで描けばよい
+if(startW==0) then
+  startW = 1
+  endW = divW
+end
+if(startH==0) then
+  startH = 1
+  endH = divH
+end
+
+-- 余分に重ねて描かないようにする。
+-- また、赤道方向に欠けがない場合は左右の切り口を描かないようにする。
+full = 0
+if ((endW-startW) >= (divW-1)) then
+  endW = startW + divW -1
+  full = 1
+end
+
+-- 三角形ポリゴン表裏問題対応のために極径下限を設ける
+-- ただ、これでも条件次第では表裏判定がおかしくなることもある模様。
+-- まあ「裏面を描画しない」にチェックを入れなければいいだけなので
+-- とりあえず対処はここまでにしておこう・・・。
+minR = 0.1
+
+-- ======================================
+--　処理開始
+-- ======================================
+obj.setoption('antialias',1)
+obj.effect()
+
+-- 左上端から順に描いて行く
+r_in = r * r2/100 --内側半径
+deltaH = math.rad(180/divH)
+deltaW = math.rad(360/divW)
+w = obj.w / divW
+h = obj.h / divH
+  local shsw,ehsw,shew,ehew={},{},{},{}
+ocr_fd={}
+local ocr_fdIP,ocr_fdKP={},{}
+
+for i = startH-1,endH-1 do
+
+  rotH0 = deltaH * i
+  rotH1 = rotH0 + deltaH
+
+  rotHC = rotH0 + deltaH/2
+  yC = -r3 * math.cos(rotHC)
+  rC = r3 * math.sin(rotHC)
+
+  y0 = -r * math.cos(rotH0) + yC
+  y1 = -r * math.cos(rotH1) + yC
+  r0 = math.max(minR, r*math.sin(rotH0))
+  r1 = math.max(minR, r*math.sin(rotH1))
+
+  iy0 = -r_in * math.cos(rotH0) + yC
+  iy1 = -r_in * math.cos(rotH1) + yC
+  ir0 = math.max(minR, r_in*math.sin(rotH0))
+  ir1 = math.max(minR, r_in*math.sin(rotH1))
+
+  v0 = h * i
+  v1 = h * (i+1)
+
+  for j = startW-1,endW-1 do
+    d = math.mod(j, divW)
+    rotW0 = - deltaW * d + rotShift
+    rotW1 = rotW0 - deltaW
+
+    rotWC = rotW0 - deltaW/2
+    xC = rC * math.sin(rotWC)
+    zC = rC * math.cos(rotWC)
+
+    -- 外側
+    x0 = r0 * math.sin(rotW0) + xC
+    x1 = r0 * math.sin(rotW1) + xC
+    x2 = r1 * math.sin(rotW1) + xC
+    x3 = r1 * math.sin(rotW0) + xC
+    z0 = r0 * math.cos(rotW0) + zC
+    z1 = r0 * math.cos(rotW1) + zC
+    z2 = r1 * math.cos(rotW1) + zC
+    z3 = r1 * math.cos(rotW0) + zC
+
+    -- 内側
+    ix0 = ir0 * math.sin(rotW0) + xC
+    ix1 = ir0 * math.sin(rotW1) + xC
+    ix2 = ir1 * math.sin(rotW1) + xC
+    ix3 = ir1 * math.sin(rotW0) + xC
+    iz0 = ir0 * math.cos(rotW0) + zC
+    iz1 = ir0 * math.cos(rotW1) + zC
+    iz2 = ir1 * math.cos(rotW1) + zC
+    iz3 = ir1 * math.cos(rotW0) + zC
+
+    u0 = w * d
+    u1 = w * (d+1)
+
+    -- 外側面
+    table.insert(ocr_fd,{x0,y0,z0, x1,y0,z1, x2,y1,z2, x3,y1,z3, u0,v0, u1,v0, u1,v1, u0,v1})
+
+    -- 内側面
+    if ( (inPat == 0) and (r2~=0) and (full==0) ) then
+      table.insert(ocr_fdIP,{ix1,iy0,iz1, ix0,iy0,iz0, ix3,iy1,iz3, ix2,iy1,iz2, u1,v0, u0,v0, u0,v1, u1,v1})
+    end
+
+    -- 内半径率r2がゼロだと切り口は三角形になるので、ポリゴン表裏問題対処のため
+    -- 頂点を1-1-2-3でdrawpolyに渡すよう意識する。
+    -- (minRで下限制御を入れたので問題ないかもしれないが念のため。)
+
+    -- 上面
+    if ( (r3 ~= 0) or (i == startH-1) and (startH ~= 1)) then
+        table.insert(ocr_fdKP,{0,y0,0, 0,y0,0, x1,y0,z1, x0,y0,z0,  u0,v0, u1,v0, u1,v0+1, u0,v0+1})
+	if ((full==0) and (r2~=0)) then
+	    table.insert(ocr_fdKP,{0,iy0,0, 0,iy0,0, ix0,iy0,iz0, ix1,iy0,iz1,  u0,v0, u1,v0, u1,v0+1, u0,v0+1})
+	end
+    end
+
+    -- 下面
+    if ( (r3 ~= 0) or (i == endH-1) and (endH ~= divH)) then
+	if ((full==0) and (r2~=0)) then
+	   table.insert(ocr_fdKP,{0,iy1,0, 0,iy1,0, ix2,iy1,iz2, ix3,iy1,iz3,  u1,v1, u0,v1, u0,v1-1, u1,v1-1})
+	end
+       table.insert(ocr_fdKP,{0,y1,0, 0,y1,0, x3,y1,z3, x2,y1,z2,  u1,v1, u0,v1, u0,v1-1, u1,v1-1})
+    end
+
+    -- shsw
+    if ((full==0) and  (j == startW-1) and (i == startH-1) and (startH ~= 1)) then
+     shsw[0],shsw[1],shsw[2] = ix0,iy0,iz0
+     shsw[3],shsw[4],shsw[5] = u0,iy1,v0
+     shsw[6],shsw[7],shsw[8] = u1,y1,v1
+     shsw[9],shsw[10],shsw[11]=x0,y0,z0
+    end
+
+    -- ehsw
+    if ((full==0) and (j == startW-1) and (i == endH-1) and (endH ~= divH)) then
+     ehsw[0],ehsw[1],ehsw[2] = u0,iy0,v0
+     ehsw[3],ehsw[4],ehsw[5] = ix3,iy1,iz3
+     ehsw[6],ehsw[7],ehsw[8] = x3,y1,z3
+     ehsw[9],ehsw[10],ehsw[11]=u1,y0,v1
+    end
+
+    -- shew
+    if ((full==0) and (j == endW-1) and (i == startH-1) and (startH ~= 1)) then
+     shew[0],shew[1],shew[2] = u0,iy1,v0
+     shew[3],shew[4],shew[5] = ix1,iy0,iz1
+     shew[6],shew[7],shew[8] = x1,y0,z1
+     shew[9],shew[10],shew[11]=u1,y1,v1
+    end
+
+    -- ehew
+    if ((full==0) and (j == endW-1) and (i == endH-1) and (endH ~= divH)) then
+     ehew[0],ehew[1],ehew[2] = ix2,iy1,iz2
+     ehew[3],ehew[4],ehew[5] = u0,iy0,v0
+     ehew[6],ehew[7],ehew[8] = u1,y0,z2
+     ehew[9],ehew[10],ehew[11]=x2,y1,z2
+    end
+
+    -- 左面
+    if ( (r3 ~= 0) or ((full==0) and (j == startW-1))) then
+     table.insert(ocr_fdKP,{ix3,iy1,iz3, ix0,iy0,iz0, x0,y0,z0, x3,y1,z3,  u0,v1, u0,v0, u0+1,v0, u0+1,v1})
+    end
+
+    -- 右面
+    if ( (kiriPat == 0) and ( (r3 ~= 0) or ((full==0) and (j == endW-1))) ) then
+     table.insert(ocr_fdKP,{ix1,iy0,iz1, ix2,iy1,iz2, x2,y1,z2, x1,y0,z1,  u1,v0, u1,v1, u1-1,v1, u1-1,v0})
+    end
+
+  end -- end of for(j)
+end -- end of for(i)
+
+    if (kiriPat == 0) and (full==0) and (r3 == 0) then
+	    if startH ~= 1 then
+    -- 上面
+        table.insert(ocr_fdKP,{0,shew[7],0, 0,shsw[10],0, shsw[9],shsw[10],shsw[11], shew[6],shew[7],shew[8], shew[0],shew[2],shsw[6],shsw[5],shsw[6]-1,shsw[5], shew[0]+1,shew[2]})
+		if r2~=0 then
+		table.insert(ocr_fdKP,{0,shsw[1],0, 0,shew[4],0, shew[3],shew[4],shew[5], shsw[0],shsw[1],shsw[2], shsw[3],shsw[5],shew[9],shew[2],shew[9]-1,shew[2], shsw[3]+1,shsw[5]})
+		end
+        table.insert(ocr_fdKP,{shsw[0],shsw[1],shsw[2],shew[3],shew[4],shew[5], shew[6],shew[7],shew[8],shsw[9],shsw[10],shsw[11], shsw[3],shsw[5],shew[9],shew[2],  shew[9]-1,shew[2], shsw[3]+1,shsw[5]})
+	    end
+	    if endH ~= divH then
+    -- 下面
+        table.insert(ocr_fdKP,{0,ehsw[7],0, 0,ehew[10],0, ehew[9],ehew[10],ehew[11], ehsw[6],ehsw[7],ehsw[8], ehsw[0],ehsw[2],ehew[6],ehew[5],ehew[6]-1,ehew[5], ehsw[0]+1,ehsw[2]})
+		if r2~=0 then
+		table.insert(ocr_fdKP,{0,ehew[1],0, 0,ehsw[4],0, ehsw[3],ehsw[4],ehsw[5], ehew[0],ehew[1],ehew[2], ehew[3],ehew[5],ehsw[9],ehsw[2],ehsw[9]-1,ehsw[2], ehew[3]+1,ehew[5]})
+		end
+        table.insert(ocr_fdKP,{ehew[0],ehew[1],ehew[2],ehsw[3],ehsw[4],ehsw[5], ehsw[6],ehsw[7],ehsw[8],ehew[9],ehew[10],ehew[11], ehew[3],ehew[5],ehsw[9],ehsw[2],  ehsw[9]-1,ehsw[2], ehew[3]+1,ehew[5]})
+	    end
+    end
+    obj.drawpoly(ocr_fd)
+      if ((inPat == 0) and (#ocr_fdIP>0)) then
+        obj.drawpoly(ocr_fdIP)
+      end
+      if ((kiriPat == 0) and (#ocr_fdKP>0)) then
+        obj.drawpoly(ocr_fdKP)
+      end
+-- 色指定で切り口を描く場合はobj.load()が必要になるので、
+-- 二度手間になっちゃうけど再計算して描画する。
+if ( (kiriPat == 1) or (inPat == 1) ) then
+  obj.load("figure", "四角形", kiriCol, 1)
+  obj.setoption('antialias',1)
+  obj.effect()
+      if ((inPat == 1) and (#ocr_fdIP>0)) then
+        ocr_fixuv(ocr_fdIP,{0,0,1,0,1,1,0,1})
+        obj.drawpoly(ocr_fdIP)
+      end
+      if ((kiriPat == 1) and (#ocr_fdKP>0)) then
+        ocr_fixuv(ocr_fdKP,{0,0,1,0,1,1,0,1})
+        obj.drawpoly(ocr_fdKP)
+      end
+end -- end of if(kiriPat)
+
+@カップ（Obj基準）
+--track@rx:上辺倍率,0,1000,100
+--track@hx:高さ倍率,0,1000,100
+--track@ocr_t2:軸回転,-7200,7200,0
+--track@r3:拡散,-2000,2000,0
+--dialog:角数(3-120),div=24;高さ基準,hBase=0;蓋の有無,futa=0;蓋の模様,futaPat=0;蓋の色,futaCol=0xffff00;
+--
+-- ●半径倍率　パーセントで指定。
+-- ●高さ倍率　パーセントで指定。
+-- ●高さ基準　0:中央基準 1:上基準　2:下基準
+-- ●蓋の有無　0:蓋なし　1:上のみ　2:下のみ　3:上下とも
+-- ●蓋の模様　0:オブジェクトの上端や下端を使う　1:「蓋の色」で指定した色
+--
+-- ======================================
+--　パラメータ初期化等
+-- ======================================
+require("OCRuv")
+rotShift = math.rad(ocr_t2)
+
+div = math.max(3, math.min(120,math.floor(div)))
+hBase = math.max(0, math.min(2,math.floor(hBase)))
+futa = math.max(0,math.min(3,math.floor(futa)))
+futaPat = math.max(0,math.min(1,math.floor(futaPat)))
+ocr_fd={}
+local ocr_fdFP={}
+
+-- ======================================
+--　処理開始
+-- ======================================
+obj.setoption('antialias',1)
+obj.effect()
+
+r = (obj.w / math.pi /2)
+r2 = r * rx/100
+h = obj.h * hx/100
+delta = math.rad(360/div)
+w = obj.w / div
+
+y0 = -h/2
+y1 = -y0
+if (hBase==1) then
+  y0 = 0
+  y1 = h
+elseif(hBase==2) then
+  y0 = -h
+  y1 = 0
+end
+
+for i=0,div-1 do
+  rot0 = -delta * i + rotShift
+  rot1 = rot0 - delta
+  rotC = rot0 - delta/2
+  xC = r3*math.sin(rotC)
+  zC = r3*math.cos(rotC)
+  x0 = r * math.sin(rot0) + xC
+  x1 = r * math.sin(rot1) + xC
+  x2 = r2 * math.sin(rot0) + xC
+  x3 = r2 * math.sin(rot1) + xC
+  z0 = r * math.cos(rot0) + zC
+  z1 = r * math.cos(rot1) + zC
+  z2 = r2 * math.cos(rot0) + zC
+  z3 = r2 * math.cos(rot1) + zC
+  px0 = w * i
+  px1 = w * (i+1)
+  -- まずは側面部分
+  table.insert(ocr_fd,{x2,y0,z2, x3,y0,z3, x1,y1,z1, x0,y1,z0,  px0,0, px1,0, px1,obj.h, px0,obj.h})
+    -- 上蓋部分
+    if ((futa==1) or (futa==3)) then
+      table.insert(ocr_fdFP,{xC,y0,zC, xC,y0,zC, x3,y0,z3, x2,y0,z2,   px0,0, px1,0, px1,1, px0,1})
+    end
+    -- 下蓋部分
+    if ((futa==2) or (futa==3)) then
+      table.insert(ocr_fdFP,{xC,y1,zC, xC,y1,zC, x0,y1,z0, x1,y1,z1,  px1,obj.h, px0,obj.h, px0,obj.h-1, px1,obj.h-1})
+    end
+end
+obj.drawpoly(ocr_fd)
+if ((futa ~= 0) and (futaPat == 0)) then
+  obj.drawpoly(ocr_fdFP)
+end
+
+-- 色指定で蓋を描く場合はobj.load()が必要になるので、
+-- 二度手間になっちゃうけど再計算して蓋だけ描画する。
+if ((futa ~= 0) and (futaPat == 1)) then
+  obj.load("figure", "四角形", futaCol, 1)
+  obj.setoption('antialias',1)
+  obj.effect()
+  ocr_fixuv(ocr_fdFP,{0,0,1,0,1,1,0,1})
+  obj.drawpoly(ocr_fdFP)
+end
+@つぶれ円錘
+--track@r2:内半径率,0,100,50
+--track@h_inShift:内軸シフト,-2000,2000,0
+--track@ocr_t2:軸回転,-7200,7200,0
+--track@ocr_t3:つぶれ,0,100,50
+--dialog:上半径,ru=24;下半径,r=100;高さ,h=300;角数(3-120),div=24;高さ基準,hBase=0;蓋の有無,futa=3;蓋の模様,futaPat=0;蓋の色,futaCol=0xffff00;内側の模様,inPat=0;内側の色,kiriCol=0xffff00;
+--
+-- ●開始番号・終了番号
+--　　　N角柱のどの部分を描画するかを指定する。
+--　　　オブジェクトの一番左側がマッピングされるものが１番目、
+--　　　一番右側がマッピングされるのがN番目。
+--　　　１番とN番をまたいで表示したいこともあると思うので、
+--　　　終了番号は１～２Nの範囲で指定する。例えば開始N、終了N+1とすると
+--　　　一番右と一番左の２つが表示される。
+--　　　なお、開始番号に０を指定した場合、カットは行なわない。
+--　　　また、
+--　　　　　　開始番号≦終了番号
+--　　　の関係を守って指定する必要がある。
+-- ●内側半径率　外側半径の何パーセントの地点を内側半径とするかを指定する。
+--　　100近くにすると外面と内面が重なって色が混ざることがあるので適宜調整を。
+-- ●内側軸シフト　内側の角柱の軸方向（Y方向）への移動量を指定する。
+-- ●高さ基準　0:中央基準 1:上基準　2:下基準
+-- ●蓋の有無　0:蓋なし　1:上のみ　2:下のみ　3:上下とも
+-- ●蓋の模様　0:オブジェクトの上端や下端を使う　1:「蓋の色」で指定した色
+-- ●切り口の模様　0:オブジェクトの端を使う　1:「切り口の色」で指定した色
+-- ●内側の模様　0:オブジェクトを使う　1:「切り口の色」で指定した色
+--
+-- ======================================
+--　パラメータ初期化等
+-- ======================================
+
+require("OCRuv")
+rotShift = math.rad(ocr_t2)
+r3sq = ocr_t3/100
+
+r = math.max(0, math.min(1000, r))
+ru = math.max(0, math.min(1000, ru))
+h = math.max(0, math.min(1000, h))
+div = math.max(3, math.min(120, math.floor(div)))
+hBase = math.max(0, math.min(2,math.floor(hBase)))
+futa = math.max(0, math.min(3, math.floor(futa)))
+futaPat = math.max(0, math.min(1, math.floor(futaPat)))
+inPat = math.max(0, math.min(1, math.floor(inPat)))
+
+  startN = 1
+  endN = div
+  full = 1
+
+-- ======================================
+--　処理開始
+-- ======================================
+obj.setoption('antialias',1)
+obj.effect()
+
+-- 左端から順に描いて行く
+
+r_in = r * r2/100 --内側半径
+ru_in = ru * r2/100 --内側半径
+delta = math.rad(360/div)
+w = obj.w / div
+
+y0 = -h/2
+y1 = -y0
+if (hBase==1) then
+  y0 = 0
+  y1 = h
+elseif(hBase==2) then
+  y0 = -h
+  y1 = 0
+end
+y0_in = y0 + h_inShift
+y1_in = y1 + h_inShift
+
+for i=startN-1,endN-1 do
+  d = math.fmod(i, div)
+  rot0 = -delta * d + rotShift
+  rotC = rot0 - delta/2
+  rot1 = rot0 - delta
+
+  x0 = r * math.sin(rot0)
+  x1 = r * math.sin(rot1)
+  z0 = r * math.cos(rot0) * r3sq
+  z1 = r * math.cos(rot1) * r3sq
+  x0_in = r_in * math.sin(rot0)
+  x1_in = r_in * math.sin(rot1)
+  z0_in = r_in * math.cos(rot0) * r3sq
+  z1_in = r_in * math.cos(rot1) * r3sq
+  x0u = ru * math.sin(rot0)
+  x1u = ru * math.sin(rot1)
+  z0u = ru * math.cos(rot0) * r3sq
+  z1u = ru * math.cos(rot1) * r3sq
+  x0u_in = ru_in * math.sin(rot0)
+  x1u_in = ru_in * math.sin(rot1)
+  z0u_in = ru_in * math.cos(rot0) * r3sq
+  z1u_in = ru_in * math.cos(rot1) * r3sq
+
+  px0 = w * d
+  px1 = w * (d+1)
+  py0 = 0
+  py1 = obj.h
+
+  -- 外径面
+  obj.drawpoly(x0u,y0,z0u, x1u,y0,z1u, x1,y1,z1, x0,y1,z0,  px0,py0, px1,py0, px1,py1, px0,py1)
+
+  -- オブジェクトを利用して内側面を描くならここで描く
+  if (((r_in ~= 0) or (ru_in ~= 0)) and (inPat==0)) then
+    obj.drawpoly(x1u_in,y0_in,z1u_in, x0u_in,y0_in,z0u_in, x0_in,y1_in,z0_in, x1_in,y1_in,z1_in,  px1,py0, px0,py0, px0,py1, px1,py1)
+  end
+
+  -- オブジェクトの端を利用して蓋を描くならここで描く
+  if (futaPat == 0) then
+    -- 上蓋部分
+    if ((futa==1) or (futa==3)) then
+      obj.drawpoly(x0u_in,y0_in,z0u_in, x1u_in,y0_in,z1u_in, x1u,y0,z1u, x0u,y0,z0u,  px0,py0, px1,py0, px1,py0+1, px0,py0+1)
+    end
+    -- 下蓋部分
+    if ((futa==2) or (futa==3)) then
+      obj.drawpoly(x1_in,y1_in,z1_in, x0_in,y1_in,z0_in, x0,y1,z0, x1,y1,z1,  px1,py1, px0,py1, px0,py1-1, px1,py1-1)
+    end
+  end
+
+end
+
+-- 色指定で切り口や内面を描く場合はobj.load()が必要になるので、
+-- 二度手間になっちゃうけど再計算して描画する。
+if (inPat == 1) then
+  obj.load("figure", "四角形", kiriCol, 1)
+  obj.setoption('antialias',1)
+  obj.effect()
+  for i=startN-1,endN-1 do
+    d = math.fmod(i, div)
+    rot0 = -delta * d + rotShift
+    rotC = rot0 - delta/2
+    rot1 = rot0 - delta
+
+  x0_in = r_in * math.sin(rot0)
+  x1_in = r_in * math.sin(rot1)
+  z0_in = r_in * math.cos(rot0) * r3sq
+  z1_in = r_in * math.cos(rot1) * r3sq
+  x0u_in = ru_in * math.sin(rot0)
+  x1u_in = ru_in * math.sin(rot1)
+  z0u_in = ru_in * math.cos(rot0) * r3sq
+  z1u_in = ru_in * math.cos(rot1) * r3sq
+
+    -- 内側面
+    if ((r_in ~= 0) and (inPat==1)) then
+      obj.drawpoly(x1u_in,y0_in,z1u_in, x0u_in,y0_in,z0u_in, x0_in,y1_in,z0_in, x1_in,y1_in,z1_in,  1,0, 0,0, 0,1, 1,1)
+    end
+
+  end
+end
+
+-- 色指定で蓋を描く場合はobj.load()が必要になるので、
+-- 二度手間になっちゃうけど再計算して描画する。
+if (futaPat == 1) then
+  obj.load("figure", "四角形", futaCol, 1)
+  obj.setoption('antialias',1)
+  obj.effect()
+  for i=startN-1,endN-1 do
+    d = math.fmod(i, div)
+    rot0 = -delta * d + rotShift
+    rotC = rot0 - delta/2
+    rot1 = rot0 - delta
+
+  x0 = r * math.sin(rot0)
+  x1 = r * math.sin(rot1)
+  z0 = r * math.cos(rot0) * r3sq
+  z1 = r * math.cos(rot1) * r3sq
+  x0_in = r_in * math.sin(rot0)
+  x1_in = r_in * math.sin(rot1)
+  z0_in = r_in * math.cos(rot0) * r3sq
+  z1_in = r_in * math.cos(rot1) * r3sq
+  x0u = ru * math.sin(rot0)
+  x1u = ru * math.sin(rot1)
+  z0u = ru * math.cos(rot0) * r3sq
+  z1u = ru * math.cos(rot1) * r3sq
+  x0u_in = ru_in * math.sin(rot0)
+  x1u_in = ru_in * math.sin(rot1)
+  z0u_in = ru_in * math.cos(rot0) * r3sq
+  z1u_in = ru_in * math.cos(rot1) * r3sq
+
+    -- 上蓋部分
+    if ((futa==1) or (futa==3)) then
+      obj.drawpoly(x0u_in,y0_in,z0u_in, x1u_in,y0_in,z1u_in, x1u,y0,z1u, x0u,y0,z0u,  0,0, 1,0, 1,1, 0,1)
+    end
+    -- 下蓋部分
+    if ((futa==2) or (futa==3)) then
+      obj.drawpoly(x1_in,y1_in,z1_in, x0_in,y1_in,z0_in, x0,y1,z0, x1,y1,z1,  1,1, 0,1, 0,0, 1,0)
+    end
+  end
+end

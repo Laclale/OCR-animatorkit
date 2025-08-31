@@ -1,0 +1,118 @@
+@キャップデコ
+--track@s:基準サイズ,1,500,75,1
+--track@ocr_t1:高さ,1,1000,400,1
+--track@ocr_t2:キャップ幅,0,250,20,1
+--track@ocr_t3:引っ込め,0,100,0
+--color@col1:キャップ色,0x0000ff
+--track@per:分割数,3,25,20,1
+--track@prt:キャップ割合,0,100,20
+obj.clearbuffer("tempbuffer",col1)
+obj.copybuffer("tempbuffer","object")
+local w=math.max(ocr_t1,s*2)
+local h=s+math.min(ocr_t2,s/2)
+local bh=s+math.min(ocr_t2,s/3)
+local n=math.min(25,math.max(math.floor(per),3))
+local onoff=ocr_t3/100
+local wc=w*(50-prt)/100
+
+obj.load("figure","円",col1,h)
+x=obj.w/2
+y=obj.h/2
+obj.drawpoly(-x, -wc/2,-y,x, -wc/2,-y,x, -wc/2,y,-x, -wc/2,y)
+obj.load("figure","円",col1,s)
+x=obj.w/2
+y=obj.h/2
+obj.drawpoly(-x,-w/2,y,x,-w/2,y,x,-w/2,-y,-x,-w/2,-y)
+
+  obj.load("figure","四角形",col1,bh)
+    x0=bh/2
+    x1=(bh-s)
+    y0=-wc/2
+    y1=(w-wc)/4
+    z0=(bh-s)
+    obj.drawpoly(x0-x1,y0-y1,z0,x0+x1/2,y0-y1,z0,x0+x1/2,y0-y1,-z0,x0-x1,y0-y1,-z0)
+    obj.drawpoly(x0+x1/2,y0-y1,-z0,x0+x1/2,y0-y1,z0,x0+x1,y0+y1,z0,x0+x1,y0+y1,-z0)
+    obj.drawpoly(x0-x1,y0-y1,-z0,x0+x1/2,y0-y1,-z0,x0+x1,y0+y1,-z0,x0-x1,y0-y1,-z0)
+    obj.drawpoly(x0+x1/2,y0-y1,z0,x0-x1,y0-y1,z0,x0-x1,y0-y1,z0,x0+x1,y0+y1,z0)
+    obj.drawpoly(x0-x1,y0-y1,z0,x0-x1,y0-y1,-z0,x0+x1,y0+y1,-z0,x0+x1,y0+y1,z0)
+
+ocr_fd={}
+  obj.load("tempbuffer")
+  obj.effect()
+  local l=s/2
+  local m=h/2
+  local r=360/n
+  local ru,rv,pir = obj.w/n,obj.h,math.pi/180*r
+  for i=0,n-1 do
+    x0=l*math.cos(pir*(i+1))
+    x1=l*math.cos(pir*i)
+    y0=l*math.sin(pir*(i+1))
+    y1=l*math.sin(pir*i)
+    x2=m*math.cos(pir*(i+1))
+    x3=m*math.cos(pir*i)
+    y2=m*math.sin(pir*(i+1))
+    y3=m*math.sin(pir*i)
+    table.insert(ocr_fd,{x0,-w/2,y0,x2,-wc/2,y2,x3,-wc/2,y3,x1,-w/2,y1, ru*i,0,ru*(i+1),0,ru*(i+1),rv,ru*i,rv})
+  end
+  obj.drawpoly(ocr_fd)
+@本体デコ
+--track@s:基準サイズ,1,500,75,1
+--track@ocr_t1:高さ,1,1000,400,1
+--track@ocr_t2:キャップ幅,0,250,20,1
+--track@ocr_t3:引っ込め,0,100,0
+--color@col1:キャップ色,0x0000ff
+--color@col2:本体色,0xffffff
+--track@per:分割数,3,25,20,1
+--track@prt:キャップ割合,0,100,20
+obj.clearbuffer("tempbuffer",col2)
+obj.copybuffer("tempbuffer","object")
+local w=math.max(ocr_t1,s*2)
+local h=s+math.min(ocr_t2,s/2)
+local bh=s+math.min(ocr_t2,s/3)
+local n=math.min(25,math.max(math.floor(per),3))
+local onoff=ocr_t3/100
+local wc=w*(50-prt)/100
+ocr_fd={}
+  uw = w/2
+  local uc = s/2
+  wc=uw - s
+  obj.load("tempbuffer")
+  obj.effect()
+  l=s/2
+  m=s/4
+  r=360/n
+  local ut = onoff * l
+  local ru,rv,rvm,pir = obj.w/n,obj.h*(100-prt)/100,obj.h,math.pi/180*r
+  for i=0,n-1 do
+    x0=l*math.cos(pir*(i+1))
+    x1=l*math.cos(pir*i)
+    y0=l*math.sin(pir*(i+1))
+    y1=l*math.sin(pir*i)
+    x2=m*math.cos(pir*(i+1))
+    x3=m*math.cos(pir*i)
+    y2=m*math.sin(pir*(i+1))
+    y3=m*math.sin(pir*i)
+    table.insert(ocr_fd,{x2,-uw/2,y2,x0,-wc/2,y0,x1,-wc/2,y1,x3,-uw/2,y3, ru*i,0,ru*(i+1),0,ru*(i+1),rv,ru*i,rv})
+    table.insert(ocr_fd,{x0,-wc/2,y0,x0,uw,y0,x1,uw,y1,x1,-wc/2,y1, ru*i,rv,ru*(i+1),rv,ru*(i+1),rvm,ru*i,rvm})
+    if(ut>0)then
+	table.insert(ocr_fd,{x2,-wc/2+ut,y2,x2,-wc/2,y2,x3,-wc/2,y3,x3,-wc/2+ut,y3, ru*i,rvm,ru*(i+1),rvm,ru*(i+1),rvm,ru*i,rvm})
+    end
+  end
+  obj.drawpoly(ocr_fd)
+  ocr_fd={}
+  obj.load("figure","四角形",col1,s/n)
+  obj.effect()
+  l=s/4
+  ru,rv = obj.w/n,obj.h
+  local ut = onoff * uc
+  for i=0,n-1 do
+    x0=l*math.cos(pir*(i+1))
+    x1=l*math.cos(pir*i)
+    y0=l*math.sin(pir*(i+1))
+    y1=l*math.sin(pir*i)
+    table.insert(ocr_fd,{x0,-uw/2+ut,y0,0,-uw/2-uc+ut,0,0,-uw/2-uc+ut,0,x1,-uw/2+ut,y1, ru*i,0,ru*(i+1),0,ru*(i+1),rv,ru*i,rv})
+  end
+obj.load("figure","円",col2,s)
+x=obj.w/2
+y=obj.h/2
+obj.drawpoly(-x, uw,-y,x, uw,-y,x, uw,y,-x, uw,y)

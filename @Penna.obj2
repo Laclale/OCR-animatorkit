@@ -1,0 +1,1444 @@
+@Shootyひれ耳
+--track@s:長さ,1,1000,150,1
+--track@ocr_t1:被膜幅,0,1000,200
+--track@m:折り畳み,4,180,30
+--track@ocr_t3:ひれ目,0,100,0
+--color@col1:関節色,0x0000ff
+--color@col2:被膜色,0x000080
+--track@per:太さ,0,500,8,1
+--check@flip:左右反転,0
+
+require("OCRUtil")
+
+  if ( flip == 0 ) then
+    flip = -1
+  end
+l=math.floor(per)/2
+sl=math.min(ocr_t1,s-per/2)
+yee=ocr_t3/100
+
+function APer(l)
+  local anl=m/180
+  local OCRTl=l+l*(1-anl)*3
+  return OCRTl
+end
+function BPer(l,sl)
+  local anl=m/180
+  local OCRTl=math.max(sl*anl,l)
+  return OCRTl
+end
+ocr_fd={}
+function Splitdraw(obj,x0,y0,x1,y1,x2,y2,x3,y3,z0,z1)
+  local x01 = (x0+x1)/2
+  local x23 = (x2+x3)/2
+  local y01 = (y0+y1)/2
+  local y23 = (y2+y3)/2
+  local u0=0
+  local u1=obj.w/2
+  local u2=obj.w
+  local v0=0
+  local v2=obj.h
+  table.insert(ocr_fd,{x0,y0,0,x01,y01,z0,x23,y23,z0,x3,y3,0, u0,v0,u1,v0,u1,v2,u0,v2})
+  table.insert(ocr_fd,{x01,y01,z0,x1,y1,0,x2,y2,0,x23,y23,z0, u1,v0,u2,v0,u2,v2,u1,v2})
+  table.insert(ocr_fd,{x1,y1,0,x01,y01,z1,x23,y23,z1,x2,y2,0, u0,v0,u1,v0,u1,v2,u0,v2})
+  table.insert(ocr_fd,{x01,y01,z1,x0,y0,0,x3,y3,0,x23,y23,z1, u1,v0,u2,v0,u2,v2,u1,v2})
+end
+function Splitdraw2(obj,x0,y0,x1,y1,x2,y2,x3,y3,z0,z1)
+  Splitdraw(obj,x0,y0,x1,y1,x2,y2,x3,y3,z0,z1)
+  local x23 = (x2+x3)/2
+  local y23 = (y2+y3)/2
+  local u0=0
+  local u1=obj.w/2
+  local u2=obj.w
+  local v2=obj.h
+  table.insert(ocr_fd,{x2,y2,0,x23,y23,z0,x3,y3,0,x23,y23,z1, u0,v2,u1,v2,u2,v2,u1,v2})
+end
+
+-- ライン描画
+obj.load("figure","四角形",col1,1)
+x0 = 0
+y0 = 0
+n=5
+for i=0,n-1 do
+  local al = (-90 + m/4*(i-2))*flip
+  x1,y1 = anglepoint(x0,y0,al,s)
+  dx,dy = anglepoint90(al,l*2)
+  Splitdraw2(obj,x0-dx,y0-dy,x0+dx,y0+dy,x1+dx,y1+dy,x1-dx,y1-dy,l,-l)
+end
+obj.drawpoly(ocr_fd)
+ocr_fd={}
+obj.load("figure","四角形",col2,1)
+  local alpr = (sl-BPer(l,sl))/4
+for i=0,n-2 do
+  local al = (-90 + m/4*(i-2))*flip
+  local al2 = (-90 + m/4*(i-1))*flip
+  x0,y0 = anglepoint(0,0,al,sl)
+  x1,y1 = anglepoint(0,0,al2,sl)
+  x2,y2 = anglepoint(0,0,(al+al2)/2,APer(l))
+  x3,y3 = anglepoint(0,0,(al+al2)/2,sl)
+  dx,dy = anglepoint90(al,l)
+  dx2,dy2 = anglepoint90(al2,l)
+  table.insert(ocr_fd,{x0+dx *flip,y0+dy *flip,0,x2,y2,0,x3,y3,alpr,x0+dx*flip,y0+dy*flip,0,0,0, 1,0, 1,1, 0,1})
+  table.insert(ocr_fd,{x1-dx2*flip,y1-dy2*flip,0,x2,y2,0,x3,y3,alpr,x1-dx2*flip,y1-dy2*flip,0,0,0, 1,0, 1,1, 0,1})
+end
+obj.drawpoly(ocr_fd)
+ocr_multifastdraw={{},{},{},{},{}}
+local uv_a=l*16
+local uv_b=l*12
+local uv_c=l*8
+local uv_d=l*4
+for i=0,n-1 do
+  local al = (-90 + m/4*(i-2))*flip
+  x0,y0 = anglepoint(0,0,al,s-l/2)
+  x1,y1 = anglepoint(x0,y0,al,uv_d*yee)
+  dx,dy = anglepoint90(al,uv_d*yee)
+  table.insert(ocr_multifastdraw[1],{x1-dx,y1-dy,0,x1+dx,y1+dy,0,x0+dx,y0+dy,0,x0-dx,y0-dy,0,0,0, uv_a,0, uv_a,uv_a, 0,uv_a})
+  table.insert(ocr_multifastdraw[2],{x1+dx,y1+dy,0,x1-dx,y1-dy,0,x0-dx,y0-dy,0,x0+dx,y0+dy,0,0,0, uv_a,0, uv_a,uv_a, 0,uv_a})
+  x0,y0 = anglepoint(0,0,al,s-(l/2)*(1-yee))
+  x1,y1 = anglepoint(x0,y0,al,l*3*yee)
+  dx,dy = anglepoint90(al,l*3*yee)
+  table.insert(ocr_multifastdraw[3],{x1+dx,y1+dy,0,x1-dx,y1-dy,0,x0-dx,y0-dy,0,x0+dx,y0+dy,0,0,0, uv_b,0, uv_b,uv_b, 0,uv_b})
+  x0,y0 = anglepoint(0,0,al,s+l/2-l*(1-yee))
+  x1,y1 = anglepoint(x0,y0,al,l*2*yee)
+  dx,dy = anglepoint90(al,l*2*yee)
+  table.insert(ocr_multifastdraw[4],{x1+dx,y1+dy,0,x1-dx,y1-dy,0,x0-dx,y0-dy,0,x0+dx,y0+dy,0,0,0, uv_c,0, uv_c,uv_c, 0,uv_c})
+  x0,y0 = anglepoint(0,0,al,s+l-(l*3/2)*(1-yee))
+  x1,y1 = anglepoint(x0,y0,al,l*yee)
+  dx,dy = anglepoint90(al,l*yee)
+  table.insert(ocr_multifastdraw[5],{x1+dx,y1+dy,0,x1-dx,y1-dy,0,x0-dx,y0-dy,0,x0+dx,y0+dy,0,0,0, uv_d,0, uv_d,uv_d, 0,uv_d})
+end
+  obj.load("figure","円",col1,uv_a)
+  obj.setoption("culling",1)
+obj.drawpoly(ocr_multifastdraw[1])
+  obj.load("figure","円",col1,uv_a,l*2)
+  obj.setoption("culling",1)
+obj.drawpoly(ocr_multifastdraw[2])
+  obj.load("figure","円",0xffffff,uv_b,l*2)
+  obj.setoption("culling",1)
+obj.drawpoly(ocr_multifastdraw[3])
+  obj.load("figure","円",0x0000ff,uv_c,uv_d)
+  obj.setoption("culling",1)
+obj.drawpoly(ocr_multifastdraw[4])
+  obj.load("figure","円",0x000000,uv_d)
+  obj.setoption("culling",1)
+obj.drawpoly(ocr_multifastdraw[5])
+@羽V2(統合版)
+--track@s:長さ,1,1000,150,1
+--track@ocr_t1:被膜幅,0,1000,200
+--track@m:折り畳み,4,180,30
+--track@lad:長さ調節,-500,500,0
+--color@col1:関節色,0x0000ff
+--color@col2:被膜色,0x000080
+--value@per:太さ,8
+--check@flipc:左右反転,0
+--track@shlt:関節硬化,0,100,0
+--track@hrnt:駒爪,0,200,100
+require("OCRUtil")
+
+  if ( flipc == 0 ) then
+    flip = -1
+  else
+    flip = 1
+  end
+l=math.floor(per)/2
+sl=math.min(ocr_t1,s-per/2)
+shl=3+3*(shlt/100)
+
+function APer(l)
+  local anl=m/180
+  local OCRTl=l+l*(1-anl)*3
+  return OCRTl
+end
+function BPer(l,sl)
+  local anl=m/180
+  local OCRTl=math.max(sl*anl,l)
+  return OCRTl
+end
+ocr_fd={}
+function Splitdraw(obj,x0,y0,x1,y1,x2,y2,x3,y3,z0,z1)
+  local x01 = (x0+x1)/2
+  local x23 = (x2+x3)/2
+  local y01 = (y0+y1)/2
+  local y23 = (y2+y3)/2
+  local u0=0
+  local u1=obj.w/2
+  local u2=obj.w
+  local v0=0
+  local v2=obj.h
+  table.insert(ocr_fd,{x0,y0,0,x01,y01,z0,x23,y23,z0,x3,y3,0, u0,v0,u1,v0,u1,v2,u0,v2})
+  table.insert(ocr_fd,{x01,y01,z0,x1,y1,0,x2,y2,0,x23,y23,z0, u1,v0,u2,v0,u2,v2,u1,v2})
+  table.insert(ocr_fd,{x1,y1,0,x01,y01,z1,x23,y23,z1,x2,y2,0, u0,v0,u1,v0,u1,v2,u0,v2})
+  table.insert(ocr_fd,{x01,y01,z1,x0,y0,0,x3,y3,0,x23,y23,z1, u1,v0,u2,v0,u2,v2,u1,v2})
+end
+function Splitdraw2(obj,x0,y0,x1,y1,x2,y2,x3,y3,z0,z1)
+  Splitdraw(obj,x0,y0,x1,y1,x2,y2,x3,y3,z0,z1)
+  local x23 = (x2+x3)/2
+  local y23 = (y2+y3)/2
+  local u0=0
+  local u1=obj.w/2
+  local u2=obj.w
+  local v2=obj.h
+  table.insert(ocr_fd,{x2,y2,0,x23,y23,z0,x3,y3,0,x23,y23,z1, u0,v2,u1,v2,u2,v2,u1,v2})
+end
+
+-- ライン描画
+obj.load("figure","四角形",col1,1)
+x0 = 0
+y0 = 0
+pos={};
+  anl = m/2 * flip
+  x1,y1 = anglepoint(x0,y0,anl,s/4)
+  dx,dy = anglepoint90(anl,l)
+  Splitdraw(obj,x0-dx,y0-dy,x0+dx,y0+dy,x1+dx,y1+dy,x1-dx,y1-dy,shl,-shl)
+  pos[1] = x1
+  pos[2] = y1
+  x0 = x1
+  y0 = y1
+  anl = anl+180-m*flip
+  alc = anl
+  x1,y1 = anglepoint(x0,y0,anl,s*3/4)
+  dx,dy = anglepoint90(anl,l)
+  Splitdraw(obj,x0-dx,y0-dy,x0+dx,y0+dy,x1+dx,y1+dy,x1-dx,y1-dy,shl,-shl)
+  pos[3] = x1
+  pos[4] = y1
+  x0 = x1
+  y0 = y1
+
+n=5
+for i=1,n-1 do
+  local al = anl - 180 + (m/4*i*flip)
+  x1,y1 = anglepoint(x0,y0,al,s)
+  dx,dy = anglepoint90(al,l)
+  Splitdraw2(obj,x0-dx,y0-dy,x0+dx,y0+dy,x1+dx,y1+dy,x1-dx,y1-dy,shl,-shl)
+end
+obj.drawpoly(ocr_fd)
+l=l/2
+obj.load("figure","円",col1,l*8)
+x0 = 0
+y0 = 0
+  Splitdraw(obj,x0-l,y0-l,x0+l,y0-l,x0+l,y0+l,x0-l,y0+l,shl,-shl)
+  x0 = pos[1]
+  y0 = pos[2]
+  Splitdraw(obj,x0-l,y0-l,x0+l,y0-l,x0+l,y0+l,x0-l,y0+l,shl,-shl)
+obj.drawpoly(ocr_fd)
+--
+if hrnt>0 then
+obj.load("figure","三角形",col1,l*8)
+  x0 = pos[3]
+  y0 = pos[4]+l*2
+  local hrny=l*6*(hrnt/100)
+  obj.drawpoly(x0-l,y0-hrny,0,x0+l,y0-hrny,0,x0+l,y0,0,x0-l,y0,0)
+end
+l=l*2
+if hrnt>0 then
+hrny=l*2*hrnt/100
+for i=1,n-1 do
+  local al = anl - 180 + (m/4*i*flip)
+  x0,y0 = anglepoint(pos[3],pos[4],al,s-l/2)
+  x1,y1 = anglepoint(x0,y0,al,hrny)
+  dx,dy = anglepoint90(al,l)
+  obj.drawpoly(x1-dx,y1-dy,0,x1+dx,y1+dy,0,x0+dx,y0+dy,0,x0-dx,y0-dy,0)
+end
+end
+
+obj.load("figure","四角形",col2,1)
+  local alpr = (sl-BPer(l,sl))/4
+for i=1,n-2 do
+  local al = anl - 180 + (m/4*i*flip)
+  local al2 = anl - 180 + (m/4*(i+1)*flip)
+  x0,y0 = anglepoint(pos[3],pos[4],al,sl)
+  x1,y1 = anglepoint(pos[3],pos[4],al2,sl)
+  x2,y2 = anglepoint(pos[3],pos[4],(al+al2)/2,APer(l))
+  x3,y3 = anglepoint(pos[3],pos[4],(al+al2)/2,sl)
+  dx,dy = anglepoint90(al,l)
+  dx2,dy2 = anglepoint90(al2,l)
+  obj.drawpoly(x0+dx *flip,y0+dy *flip,0,x2,y2,0,x3,y3,alpr,x0+dx*flip,y0+dy*flip,0)
+  obj.drawpoly(x1-dx2*flip,y1-dy2*flip,0,x2,y2,0,x3,y3,alpr,x1-dx2*flip,y1-dy2*flip,0)
+end
+l=l/2
+x0,y0 = 0,0 + l
+x1,y1 = pos[1],pos[2] + l
+  obj.drawpoly(x0,y0,0,x1,y1,0,x1,y1+sl/4,0,x0,y0+sl/4,0)
+  alc2 = alc - 180 + (m/8*flip)
+  x0,y0 = x1,y1
+  x2,y2 = anglepoint(pos[3],pos[4],alc-180,APer(l*2))
+  dx,dy = anglepoint90(alc,l*2)
+x1,y1 = x2-dx*flip,y2-dy*flip
+x2,y2 = anglepoint(pos[3],pos[4],alc2,sl)
+  obj.drawpoly(x0,y0,0,x1,y1,0,x2,y2,alpr,x0,y0+sl/4,0)
+x0,y0 = x2,y2
+  alc = alc2
+  alc2 = alc + (m/8*flip)
+  dx2,dy2 = anglepoint90(alc2,l*2)
+x2,y2 = anglepoint(pos[3],pos[4],alc2,sl)
+  obj.drawpoly(x1,y1,0,x2-dx2*flip,y2-dy2*flip,0,x0,y0,alpr,x0,y0,alpr)
+@悪魔羽(完全体)
+--information:悪魔羽(完全体)【使用不可】
+--track0:長さ,1,1000,150,1
+--track1:被膜幅,0,1000,200
+--track2:折り畳み,4,180,30
+--dialog:関節色/col,col1=0x0000ff;被膜色/col,col2=0x000080;太さ,per=8;左右反転/chk,flip=0;
+debug_print(string.format("羽V2(統合版)に移行しました。関節硬化や駒爪を調節してください。"))
+
+@悪魔羽(成長中)
+--information:悪魔羽(成長中)【使用不可】
+--track0:長さ,1,1000,75,1
+--track1:被膜幅,0,1000,0
+--track2:折り畳み,4,180,0
+--dialog:関節色/col,col1=0x0000ff;被膜色/col,col2=0xffffff;太さ,per=8;左右反転/chk,flip=0;
+debug_print(string.format("羽V2(統合版)に移行しました。関節硬化や駒爪を調節してください。"))
+
+@羽(not悪魔)
+--information:羽(not悪魔)【使用不可】
+--track0:長さ,1,1000,150,1
+--track1:被膜幅,0,1000,200
+--track2:折り畳み,4,180,30
+--track3:長さ調節,-500,500,0
+--dialog:関節色/col,col1=0x0000ff;被膜色/col,col2=0x000080;太さ,per=8;左右反転/chk,flip=0;
+debug_print(string.format("羽V2(統合版)に移行しました。関節硬化や駒爪を調節してください。"))
+
+@P_悪魔化腕
+--information:P_悪魔化腕【使用不可】
+--track0:長さ,0,10000,300
+--track1:Z内角,-360,360,0
+--track2:Y内角,-360,360,0
+--track3:ねじれ,-180,180,0
+--dialog:分割数,BN=20;色/col,col=0x000000;手size,size=30;太さ,bwt=7;両端を丸める/chk,maru=0;描画方法(0-4),CHA=0;内部,SEC=0;ひれ反転/chk,rev=0;P親番号[1-100],local p_num=nil;
+weight=bwt/math.sqrt(2)
+l=math.floor(weight)/2
+
+if CHA<3 then
+  debug_print(string.format("悪魔化腕V2で腕ひれの値を%dにしてください",l*2))
+else -- cha<3
+  debug_print(string.format("悪魔化腕V2と腕V4に移行しました。この状態でひれが絵画されないのは仕様です"))
+end
+
+@悪魔化腕V2
+--track@ocr_t0:長さ,0,10000,300
+--track@ocr_t1:Z内角,-360,360,0
+--track@ocr_t2:Y内角,-360,360,0
+--track@ocr_t3:ねじれ,-180,180,0
+--value@BN:分割数,20
+--color@colA:色A,0x000000
+--color@colB:色B,0x000000
+--value@size:手size,30
+--track@bwt:太さ,0,500,7,1
+--check@maru:両端を丸める,0
+--value@CHA:描画方法(0-4),0
+--value@SEC:内部,0
+--track@h_len:腕ひれ,0,500,0
+--check@rev:ひれ反転,0;
+--check@ocr_useBoneP:ボーン制御P,0
+--track@p_numP:P親番号,1,100,1,1
+
+if ocr_useBoneP==1 then
+require("rikky_parent_control")
+require("OCRUtil")
+end
+
+weight=bwt/math.sqrt(2)
+l=math.floor(weight)/2
+-- check.
+  XX={}
+  YY={}
+  ZZ={}
+  TW={}
+  XX[0]=0
+  YY[0]=0
+  ZZ[0]=0
+  TW[0]=0
+  XX[1]=ocr_t0/2
+  YY[1]=0
+  ZZ[1]=0
+  TW[1]=ocr_t3/2
+  XX[2]=ocr_t0/2
+  YY[2]=ocr_t1
+  ZZ[2]=ocr_t2
+  TW[2]=ocr_t3/2-ocr_t2
+  NN=2
+-- 関数共通
+function PassXYZ(s) -- s<=1
+  Ns=NN*s
+  Ns1=math.floor(Ns)
+  Ns2=(Ns-Ns1)/2
+
+  if Ns1<=0 then
+    nx=Ax[1]*Ns2*Ns2+Bx[1]*Ns2+Cx[1]
+    ny=Ay[1]*Ns2*Ns2+By[1]*Ns2+Cy[1]
+    nz=Az[1]*Ns2*Ns2+Bz[1]*Ns2+Cz[1]
+    nt=At[1]*Ns2*Ns2+Bt[1]*Ns2+Ct[1]
+  elseif Ns1==NN-1 then
+    SS1=Ns2+0.5
+    nx=Ax[Ns1]*SS1*SS1+Bx[Ns1]*SS1+Cx[Ns1]
+    ny=Ay[Ns1]*SS1*SS1+By[Ns1]*SS1+Cy[Ns1]
+    nz=Az[Ns1]*SS1*SS1+Bz[Ns1]*SS1+Cz[Ns1]
+    nt=At[Ns1]*SS1*SS1+Bt[Ns1]*SS1+Ct[Ns1]
+   elseif s==1 then
+    nx=XX[NN]
+    ny=YY[NN]
+    nz=ZZ[NN]
+    nt=TW[NN]
+  else
+    SS1=Ns2+0.5
+    SS2=Ns2
+    RS=2*Ns2
+    nx=(Ax[Ns1]*SS1*SS1+Bx[Ns1]*SS1+Cx[Ns1])*(1-RS)+RS*(Ax[Ns1+1]*SS2*SS2+Bx[Ns1+1]*SS2+Cx[Ns1+1])
+    ny=(Ay[Ns1]*SS1*SS1+By[Ns1]*SS1+Cy[Ns1])*(1-RS)+RS*(Ay[Ns1+1]*SS2*SS2+By[Ns1+1]*SS2+Cy[Ns1+1])
+    nz=(Az[Ns1]*SS1*SS1+Bz[Ns1]*SS1+Cz[Ns1])*(1-RS)+RS*(Az[Ns1+1]*SS2*SS2+Bz[Ns1+1]*SS2+Cz[Ns1+1])
+    nt=(At[Ns1]*SS1*SS1+Bt[Ns1]*SS1+Ct[Ns1])*(1-RS)+RS*(At[Ns1+1]*SS2*SS2+Bt[Ns1+1]*SS2+Ct[Ns1+1])
+  end
+  return nx,ny,nz,nt
+end
+
+function ShiftR(iax,iay,iaz,ir)
+  abs=(iax*iax+iay*iay)^0.5
+  ibx,iby=iay/abs,-iax/abs
+  icx,icy,icz=iax*iaz,iay*iaz,-iax*iax-iay*iay
+  abs=(icx*icx+icy*icy+icz*icz)^0.5
+  icx,icy,icz=icx/abs,icy/abs,icz/abs
+  mc=math.cos(ir/180*math.pi)  
+  ms=math.sin(ir/180*math.pi)
+  return obj.w*(ibx*mc+icx*ms)/2,obj.w*(iby*mc+icy*ms)/2,obj.w*(icz*ms)/2
+end
+function OCRTw(ox,oy,oz,ir)
+  local rx = -ir/180*math.pi
+  local OCRTx=ox
+  local OCRTy=(oy*math.cos(rx)-oz*math.sin(rx))
+  local OCRTz=(oy*math.sin(rx)-oz*math.cos(rx))
+  return OCRTx,OCRTy,OCRTz
+end
+  for i=1,NN do
+    s1=YY[i]*math.pi/180
+    s2=(ZZ[i]+90)*math.pi/180
+    XX[i],YY[i],ZZ[i]=XX[i]*math.sin(s1)*math.sin(s2),-XX[i]*math.cos(s1),-XX[i]*math.sin(s1)*math.cos(s2)
+  end
+
+-- --------以降共通
+  for i=1,NN do
+    XX[i]=XX[i-1]+XX[i]
+    YY[i]=YY[i-1]+YY[i]
+    ZZ[i]=ZZ[i-1]+ZZ[i]
+  end
+
+  OFH=(1+obj.frame)/(1+obj.totalframe)
+debug_print(string.format("OFH = %d, NN = %d, BN = %d",OFH,NN,BN))
+
+  Ax={};Bx={};Cx={};
+  Ay={};By={};Cy={};
+  Az={};Bz={};Cz={};
+  At={};Bt={};Ct={};
+
+  for M=1,NN-1 do
+    Ax[M]=2*XX[M-1]-4*XX[M]+2*XX[M+1]
+    Bx[M]=-3*XX[M-1]+4*XX[M]-XX[M+1] 
+    Cx[M]=XX[M-1]
+    Ay[M]=2*YY[M-1]-4*YY[M]+2*YY[M+1]
+    By[M]=-3*YY[M-1]+4*YY[M]-YY[M+1] 
+    Cy[M]=YY[M-1]
+    Az[M]=2*ZZ[M-1]-4*ZZ[M]+2*ZZ[M+1]
+    Bz[M]=-3*ZZ[M-1]+4*ZZ[M]-ZZ[M+1] 
+    Cz[M]=ZZ[M-1]
+    At[M]=2*TW[M-1]-4*TW[M]+2*TW[M+1]
+    Bt[M]=-3*TW[M-1]+4*TW[M]-TW[M+1] 
+    Ct[M]=TW[M-1]
+  end
+
+  if CHA==0 then
+    Nmax=NN*BN
+    Nv=Nmax
+    Ama=0
+  elseif CHA==1 then
+    Nmax=math.floor(NN*BN*OFH)
+    Nv=NN*BN
+    Ama=NN*BN*OFH-Nmax
+  elseif CHA==2 then
+    Nmax=math.floor(NN*BN*OFH)
+    Nv=Nmax
+    Ama=NN*BN*OFH-Nmax
+  elseif CHA==3 then 
+    Nmax=math.floor(NN*BN*OFH)
+  else
+    Nmax=NN*BN
+  end
+  Nhalf=math.floor(Nmax/2)
+
+--ライン描画
+ocr_fd={}
+obj.load("figure","四角形",colA,l*8)
+obj.effect()
+
+if CHA<3 then
+  xf,yf,zf,tf = PassXYZ(0)
+  ix,iy,iz,it =PassXYZ(0.5/(NN*BN))
+  dx,dy,dz= ShiftR(ix-xf,iy-yf,iz-zf,TW[0])
+  x1,y1,z1 = xf+dx,yf+dy,zf+dz
+  x0,y0,z0 = xf-dx,yf-dy,zf-dz
+    for i=1,Nhalf do
+	ix,iy,iz,it =PassXYZ(i/(NN*BN))
+	dx,dy,dz= ShiftR(ix-xf,iy-yf,iz-zf,it)
+	x2,y2,z2=ix+dx,iy+dy,iz+dz
+	x3,y3,z3=ix-dx,iy-dy,iz-dz
+	v1=obj.h*(1-(i)/(Nv+Ama))
+	v2=obj.h*(1-(i-1)/(Nv+Ama))
+	if SEC==1 then
+	table.insert(ocr_fd,{y0,z0,x0, y1,z1,x1, y2,z2,x2, y3,z3,x3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+	elseif SEC==2 then
+	table.insert(ocr_fd,{z0,y0,x0, z1,y1,x1, z2,y2,x2, z3,y3,x3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+	else
+	table.insert(ocr_fd,{x0,y0,z0, x1,y1,z1, x2,y2,z2, x3,y3,z3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+	end
+if i%4==3 then
+  local cw=h_len
+  local owu,ohv=obj.w/2,obj.h/2
+  local npx,npy,npz = OCRTw(0,0,cw*3,it)
+  if rev==1 then
+	npx,npy,npz = npx*-1,npy*-1,npz*-1
+  end
+  npx,npy,npz = ix+npx,iy+npy,iz+npz
+    if SEC==1 then
+	table.insert(ocr_fd,{ndy0,ndz0,ndx0, ndy1,ndz1,ndx1, npy,npz,npx, npy,npz,npx, 0,0, obj.w,0, owu,ohv, owu,ohv})
+	table.insert(ocr_fd,{npy,npz,npx, ndy1,ndz1,ndx1, ndy2,ndz2,ndx2, npy,npz,npx, owu,ohv, obj.w,0, obj.w,obj.h, owu,ohv})
+	table.insert(ocr_fd,{npy,npz,npx, npy,npz,npx, ndy2,ndz2,ndx2, ndy3,ndz3,ndx3, owu,ohv, owu,ohv, obj.w,obj.h, 0,obj.h})
+	table.insert(ocr_fd,{ndy0,ndz0,ndx0, npy,npz,npx, npy,npz,npx, ndy3,ndz3,ndx3, 0,0, owu,ohv, owu,ohv, 0,obj.h})
+    elseif SEC==2 then
+	table.insert(ocr_fd,{ndz0,ndy0,ndx0, ndz1,ndy1,ndx1, npz,npy,npx, npz,npy,npx, 0,0, obj.w,0, owu,ohv, owu,ohv})
+	table.insert(ocr_fd,{npz,npy,npx, ndz1,ndy1,ndx1, ndz2,ndy2,ndx2, npz,npy,npx, owu,ohv, obj.w,0, obj.w,obj.h, owu,ohv})
+	table.insert(ocr_fd,{npz,npy,npx, npz,npy,npx, ndz2,ndy2,ndx2, ndz3,ndy3,ndx3, owu,ohv, owu,ohv, obj.w,obj.h, 0,obj.h})
+	table.insert(ocr_fd,{ndz0,ndy0,ndx0, npz,npy,npx, npz,npy,npx, ndz3,ndy3,ndx3, 0,0, owu,ohv, owu,ohv, 0,obj.h})
+    else
+	table.insert(ocr_fd,{ndx0,ndy0,ndz0, ndx1,ndy1,ndz1, npx,npy,npz, npx,npy,npz, 0,0, obj.w,0, owu,ohv, owu,ohv})
+	table.insert(ocr_fd,{npx,npy,npz, ndx1,ndy1,ndz1, ndx2,ndy2,ndz2, npx,npy,npz, owu,ohv, obj.w,0, obj.w,obj.h, owu,ohv})
+	table.insert(ocr_fd,{npx,npy,npz, npx,npy,npz, ndx2,ndy2,ndz2, ndx3,ndy3,ndz3, owu,ohv, owu,ohv, obj.w,obj.h, 0,obj.h})
+	table.insert(ocr_fd,{ndx0,ndy0,ndz0, npx,npy,npz, npx,npy,npz, ndx3,ndy3,ndz3, 0,0, owu,ohv, owu,ohv, 0,obj.h})
+    end
+end
+	x0,y0,z0=x3,y3,z3
+	x1,y1,z1=x2,y2,z2
+	xf,yf,zf=ix,iy,iz
+    end -- i
+  if Ama>0 then
+    ix,iy,iz,it =PassXYZ((Nmax+Ama)/(NN*BN))
+    dx,dy,dz= ShiftR(ix-xf,iy-yf,iz-zf,it)
+    x2,y2,z2=ix+dx,iy+dy,iz+dz
+    x3,y3,z3=ix-dx,iy-dy,iz-dz
+    v1=obj.h*(1-(Nmax+Ama)/(Nv+Ama))
+    v2=obj.h*(1-Nmax/(Nv+Ama))
+    if SEC==1 then
+	table.insert(ocr_fd,{y0,z0,x0, y1,z1,x1, y2,z2,x2, y3,z3,x3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+    elseif SEC==2 then
+	table.insert(ocr_fd,{z0,y0,x0, z1,y1,x1, z2,y2,x2, z3,y3,x3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+    else
+	table.insert(ocr_fd,{x0,y0,z0, x1,y1,z1, x2,y2,z2, x3,y3,z3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+    end
+  end
+  obj.drawpoly(ocr_fd)
+else -- cha<3
+  for i=0,Nhalf do
+    obj.ox , obj.oy , obj.oz ,NL =PassXYZ(i/(NN*BN))
+    obj.draw()
+  end
+end
+
+ocr_fd={}
+obj.load("figure","四角形",colB,l*8)
+obj.effect()
+
+if CHA<3 then
+    for i=Nhalf+1,Nmax do
+	ix,iy,iz,it =PassXYZ(i/(NN*BN))
+	dx,dy,dz= ShiftR(ix-xf,iy-yf,iz-zf,it)
+	x2,y2,z2=ix+dx,iy+dy,iz+dz
+	x3,y3,z3=ix-dx,iy-dy,iz-dz
+	v1=obj.h*(1-(i)/(Nv+Ama))
+	v2=obj.h*(1-(i-1)/(Nv+Ama))
+	if SEC==1 then
+    table.insert(ocr_fd,{y0,z0,x0, y1,z1,x1, y2,z2,x2, y3,z3,x3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+	elseif SEC==2 then
+    table.insert(ocr_fd,{z0,y0,x0, z1,y1,x1, z2,y2,x2, z3,y3,x3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+	else
+    table.insert(ocr_fd,{x0,y0,z0, x1,y1,z1, x2,y2,z2, x3,y3,z3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+	end
+if i%4==3 then
+  local cw=h_len
+  local owu,ohv=obj.w/2,obj.h/2
+  local npx,npy,npz = OCRTw(0,0,cw*3,it)
+  if rev==1 then
+	npx,npy,npz = npx*-1,npy*-1,npz*-1
+  end
+  npx,npy,npz = ix+npx,iy+npy,iz+npz
+    if SEC==1 then
+	table.insert(ocr_fd,{ndy0,ndz0,ndx0, ndy1,ndz1,ndx1, npy,npz,npx, npy,npz,npx, 0,0, obj.w,0, owu,ohv, owu,ohv})
+	table.insert(ocr_fd,{npy,npz,npx, ndy1,ndz1,ndx1, ndy2,ndz2,ndx2, npy,npz,npx, owu,ohv, obj.w,0, obj.w,obj.h, owu,ohv})
+	table.insert(ocr_fd,{npy,npz,npx, npy,npz,npx, ndy2,ndz2,ndx2, ndy3,ndz3,ndx3, owu,ohv, owu,ohv, obj.w,obj.h, 0,obj.h})
+	table.insert(ocr_fd,{ndy0,ndz0,ndx0, npy,npz,npx, npy,npz,npx, ndy3,ndz3,ndx3, 0,0, owu,ohv, owu,ohv, 0,obj.h})
+    elseif SEC==2 then
+	table.insert(ocr_fd,{ndz0,ndy0,ndx0, ndz1,ndy1,ndx1, npz,npy,npx, npz,npy,npx, 0,0, obj.w,0, owu,ohv, owu,ohv})
+	table.insert(ocr_fd,{npz,npy,npx, ndz1,ndy1,ndx1, ndz2,ndy2,ndx2, npz,npy,npx, owu,ohv, obj.w,0, obj.w,obj.h, owu,ohv})
+	table.insert(ocr_fd,{npz,npy,npx, npz,npy,npx, ndz2,ndy2,ndx2, ndz3,ndy3,ndx3, owu,ohv, owu,ohv, obj.w,obj.h, 0,obj.h})
+	table.insert(ocr_fd,{ndz0,ndy0,ndx0, npz,npy,npx, npz,npy,npx, ndz3,ndy3,ndx3, 0,0, owu,ohv, owu,ohv, 0,obj.h})
+    else
+	table.insert(ocr_fd,{ndx0,ndy0,ndz0, ndx1,ndy1,ndz1, npx,npy,npz, npx,npy,npz, 0,0, obj.w,0, owu,ohv, owu,ohv})
+	table.insert(ocr_fd,{npx,npy,npz, ndx1,ndy1,ndz1, ndx2,ndy2,ndz2, npx,npy,npz, owu,ohv, obj.w,0, obj.w,obj.h, owu,ohv})
+	table.insert(ocr_fd,{npx,npy,npz, npx,npy,npz, ndx2,ndy2,ndz2, ndx3,ndy3,ndz3, owu,ohv, owu,ohv, obj.w,obj.h, 0,obj.h})
+	table.insert(ocr_fd,{ndx0,ndy0,ndz0, npx,npy,npz, npx,npy,npz, ndx3,ndy3,ndz3, 0,0, owu,ohv, owu,ohv, 0,obj.h})
+    end
+end
+	x0,y0,z0=x3,y3,z3
+	x1,y1,z1=x2,y2,z2
+	xf,yf,zf=ix,iy,iz
+    end -- i
+  if Ama>0 then
+    ix,iy,iz,it =PassXYZ((Nmax+Ama)/(NN*BN))
+    dx,dy,dz= ShiftR(ix-xf,iy-yf,iz-zf,it)
+    x2,y2,z2=ix+dx,iy+dy,iz+dz
+    x3,y3,z3=ix-dx,iy-dy,iz-dz
+    v1=obj.h*(1-(Nmax+Ama)/(Nv+Ama))
+    v2=obj.h*(1-Nmax/(Nv+Ama))
+    if SEC==1 then
+	table.insert(ocr_fd,{y0,z0,x0, y1,z1,x1, y2,z2,x2, y3,z3,x3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+    elseif SEC==2 then
+	table.insert(ocr_fd,{z0,y0,x0, z1,y1,x1, z2,y2,x2, z3,y3,x3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+    else
+	table.insert(ocr_fd,{x0,y0,z0, x1,y1,z1, x2,y2,z2, x3,y3,z3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+    end
+  end
+  obj.drawpoly(ocr_fd)
+else -- cha<3
+  for i=Nhalf+1,Nmax do
+    obj.ox , obj.oy , obj.oz ,NL =PassXYZ(i/(NN*BN))
+    obj.draw()
+  end
+end
+
+--頂点の描画
+if maru==1 then
+ocr_fd={}
+  obj.load("figure","円",colA,l*8)
+  obj.effect()
+
+  cw=l*4
+  for i=0,1 do
+    ix,iy,iz,it =PassXYZ(i/NN)
+    if SEC==1 then
+    table.insert(ocr_fd,{iy+cw,iz,ix+cw, iy+cw,iz,ix-cw, iy-cw,iz,ix-cw, iy-cw,iz,ix+cw, 0,0, obj.w,0, obj.w,obj.h, 0,obj.h})
+    elseif SEC==2 then
+    table.insert(ocr_fd,{iz,iy+cw,ix+cw, iz,iy+cw,ix-cw, iz,iy-cw,ix-cw, iz,iy-cw,ix+cw, 0,0, obj.w,0, obj.w,obj.h, 0,obj.h})
+    else
+    table.insert(ocr_fd,{ix+cw,iy+cw,iz, ix-cw,iy+cw,iz, ix-cw,iy-cw,iz, ix+cw,iy-cw,iz, 0,0, obj.w,0, obj.w,obj.h, 0,obj.h})
+    end
+  end -- i
+  obj.drawpoly(ocr_fd)
+end
+	OCRNextx,OCRNexty,OCRNextz,OCRNext = 0, 0, 0,1
+	  ix,iy,iz,it =PassXYZ(1)
+    if SEC==1 then
+    OCRNextx,OCRNexty,OCRNextz = iy, iz, ix
+    elseif SEC==2 then
+    OCRNextx,OCRNexty,OCRNextz = iz, iy, ix
+    else
+    OCRNextx,OCRNexty,OCRNextz = ix, iy, iz
+    end
+debug_print(string.format("OCRNextx = %d, OCRNexty = %d, OCRNextz = %d",OCRNextx,OCRNexty,OCRNextz))
+
+-- ---------ここから違う
+--先端描画
+obj.load("figure","円",colB,size*4)
+obj.effect()
+
+  if NN*BN*OFH<=1/2 then
+    inm=1/2
+  else
+    inm=NN*BN*OFH
+  end
+
+  if CHA==0 then inm=NN*BN end
+  
+debug_print(string.format("inm = %d, NN = %d, BN = %d",inm,NN,BN))
+
+  xf,yf,zf,tf = PassXYZ((inm-1/2)/(NN*BN))
+  ix,iy,iz,it = PassXYZ(inm/(NN*BN))
+
+  dx,dy,dz=ix-xf,iy-yf,iz-zf
+  kika=obj.h/(dx*dx+dy*dy+dz*dz)^0.5/2
+  dx,dy,dz=dx*kika,dy*kika,dz*kika
+
+  xf,yf,zf=ix-dx,iy-dy,iz-dz
+  ix,iy,iz=ix+dx,iy+dy,iz+dz
+  dx,dy,dz= ShiftR(dx,dy,dz,it)
+
+  x3,y3,z3 = xf-dx,yf-dy,zf-dz
+  x2,y2,z2 = xf+dx,yf+dy,zf+dz
+  x1,y1,z1 = ix+dx,iy+dy,iz+dz
+  x0,y0,z0 = ix-dx,iy-dy,iz-dz
+  if SEC==1 then
+    obj.drawpoly(y0,z0,x0, y1,z1,x1, y2,z2,x2, y3,z3,x3, 0,0, obj.w,0, obj.w,obj.h, 0,obj.h)
+  elseif SEC==2 then
+    obj.drawpoly(z0,y0,x0, z1,y1,x1, z2,y2,x2, z3,y3,x3, 0,0, obj.w,0, obj.w,obj.h, 0,obj.h)
+  else
+    obj.drawpoly(x0,y0,z0, x1,y1,z1, x2,y2,z2, x3,y3,z3, 0,0, obj.w,0, obj.w,obj.h, 0,obj.h)
+  end
+if ocr_useBoneP==1 then
+local OCRDx,OCRDy,OCRDz,OCRsrx,OCRsry,OCRsrz
+	local OCRNx,OCRNy,OCRNz,OCRNext = 0, 0, 0,1
+	  ix,iy,iz,it =PassXYZ(1)
+    if SEC==1 then
+    OCRNx,OCRNy,OCRNz = iy, iz, ix
+    elseif SEC==2 then
+    OCRNx,OCRNy,OCRNz = iz, iy, ix
+    else
+    OCRNx,OCRNy,OCRNz = ix, iy, iz
+    end
+  OCRsrx,OCRsry,OCRsrz = obj.rx,obj.ry,obj.rz
+  if OCRsrx==nil then OCRsrx = 0 end
+  if OCRsry==nil then OCRsry = 0 end
+  if OCRsrz==nil then OCRsrz = 0 end
+  
+   OCRDx=math.rad(OCRsrx)
+   OCRDy=math.rad(OCRsry)
+   OCRDz=math.rad(OCRsrz)
+    OCRNextx,OCRNexty,OCRNextz=OCRRoll(OCRNx,OCRNy,OCRNz,OCRDx,OCRDy,OCRDz)
+--必要な情報は位置三方向、角度三方向、拡大率、透明度
+
+--位置はAviUtlの画面に対して絶対的な位置をコピーするのでトラックバーと相対的位置の和になります
+r_parent_info[p_numP].x = obj.getvalue("x") + OCRNextx
+r_parent_info[p_numP].y = obj.getvalue("y") + OCRNexty
+r_parent_info[p_numP].z = obj.getvalue("z") + OCRNextz
+
+--角度はすでにトラックバーの値が含まれているのでそのままです
+r_parent_info[p_numP].rx = obj.rx
+r_parent_info[p_numP].ry = obj.ry
+r_parent_info[p_numP].rz = obj.rz
+
+--拡大率はトラックバーの値そのままが出てくるので100で割ります
+r_parent_info[p_numP].zoom = obj.zoom * obj.getvalue("zoom") * 0.01
+
+--拡大率と透明度は足すのではなくかけて値をコピーします
+r_parent_info[p_numP].alpha = obj.alpha * obj.getvalue("alpha")
+end
+@悪魔化腕
+--information:悪魔化腕【使用不可】
+--track0:長さ,0,10000,300
+--track1:Z内角,-360,360,0
+--track2:Y内角,-360,360,0
+--track3:ねじれ,-180,180,0
+--dialog:分割数,BN=20;色/col,col=0x000000;手size,size=30;太さ,bwt=7;両端を丸める/chk,maru=0;描画方法(0-4),CHA=0;内部,SEC=0;ひれ反転/chk,rev=0;
+weight=bwt/math.sqrt(2)
+l=math.floor(weight)/2
+if CHA<3 then
+  debug_print(string.format("悪魔化腕V2で腕ひれの値を%dにしてください",l*2))
+else -- cha<3
+  debug_print(string.format("悪魔化腕V2と腕V4に移行しました。この状態でひれが絵画されないのは仕様です"))
+end
+
+@腕ひれ(浸食期)
+--information:腕ひれ(浸食期)【使用不可】
+--track0:長さ,0,10000,300
+--track1:Z内角,-360,360,0
+--track2:Y内角,-360,360,0
+--track3:ねじれ,-180,180,0
+--dialog:分割数,BN=20;色/col,col=0x8080ff;太さ,bwt=5;両端を丸める/chk,maru=0;描画方法(0-4),CHA=0;内部,SEC=0;変化前,gbef=120;変化後,gaft=140;
+local ocr_t0 = obj.track0
+function Infection(moto)
+  local a=math.min( gaft, math.max( gbef, obj.track0 ) )
+  local change=moto*(a-gbef)/(gaft-gbef)
+  return change
+end
+weight=bwt/math.sqrt(2)
+l=math.floor(weight)/2+Infection(math.floor(2/math.sqrt(2))/2)
+if CHA<3 then
+  debug_print(string.format("悪魔化腕V2で腕ひれの値を%dにしてください",Infection(l*2)))
+else -- cha<3
+  debug_print(string.format("悪魔化腕V2と腕V4に移行しました。この状態でひれが絵画されないのは仕様です"))
+end
+@腕ひれ(Liy浸食期)
+--information:腕ひれ(Liy浸食期)【使用不可】
+--track0:長さ,0,10000,300
+--track1:Z内角,-360,360,0
+--track2:Y内角,-360,360,0
+--track3:ねじれ,-180,180,0
+--dialog:分割数,BN=20;色/col,col=0x8080ff;太さ,bwt=5;両端を丸める/chk,maru=0;描画方法(0-4),CHA=0;内部,SEC=0;
+local ocr_t0 = obj.track0
+function Infection(moto)
+  local a=math.min( 250, math.max( 220, obj.track0 ) )
+  local change=moto*(a-220)/30
+  return change
+end
+weight=bwt/math.sqrt(2)
+l=math.floor(weight)/2+Infection(math.floor(2/math.sqrt(2))/2)
+
+if CHA<3 then
+  debug_print(string.format("悪魔化腕V2で腕ひれの値を%dにしてください",Infection(l*2)))
+else -- cha<3
+  debug_print(string.format("悪魔化腕V2と腕V4に移行しました。この状態でひれが絵画されないのは仕様です"))
+end
+
+@腕ひれ(長さ無変化浸食期)
+--information:腕ひれ(長さ無変化浸食期)【使用不可】
+--track0:浸食率,0,100,0
+--track1:Z内角,-360,360,0
+--track2:Y内角,-360,360,0
+--track3:ねじれ,-180,180,0
+--dialog:分割数,BN=20;色/col,col=0x8080ff;太さ,bwt=5;両端を丸める/chk,maru=0;描画方法(0-4),CHA=0;内部,SEC=0;長さ,ot0=100;
+local ocr_t0 = obj.track0
+function Infection(moto)
+  local change=moto*ocr_t0/100
+  return change
+end
+weight=bwt/math.sqrt(2)
+l=math.floor(weight)/2+Infection(math.floor(2/math.sqrt(2))/2)
+if CHA<3 then
+  debug_print(string.format("悪魔化腕V2で腕ひれの値を%dにしてください",Infection(l*2)))
+else -- cha<3
+  debug_print(string.format("悪魔化腕V2と腕V4に移行しました。この状態でひれが絵画されないのは仕様です"))
+end
+
+@本体
+--track@s:基準サイズ,1,500,75,1
+--track@ocr_t1:高さ,1,1000,400,1
+--track@ocr_t2:キャップ幅,0,250,20,1
+--track@ocr_t3:引っ込め,0,100,0
+--color@col1:キャップ色,0x0000ff
+--color@col2:本体色,0xffffff
+--track@per:分割数,3,25,20,1
+--check@:上下反転/chk,flip=0
+--track@prt:キャップ割合,0,100,20
+
+local w=math.max(ocr_t1,s*2)
+local h=s+math.min(ocr_t2,s/2)
+local bh=s+math.min(ocr_t2,s/3)
+local n=math.min(25,math.max(math.floor(per),3))
+local onoff=ocr_t3/100
+local wc=w*(50-prt)/100
+
+obj.load("figure","円",col1,h)
+x=obj.w/2
+y=obj.h/2
+obj.drawpoly(-x, -wc/2,-y,x, -wc/2,-y,x, -wc/2,y,-x, -wc/2,y)
+obj.load("figure","円",col1,s)
+x=obj.w/2
+y=obj.h/2
+obj.drawpoly(-x,-w/2,y,x,-w/2,y,x,-w/2,-y,-x,-w/2,-y)
+
+  obj.load("figure","四角形",col1,bh)
+    x0=bh/2
+    x1=(bh-s)
+    y0=-wc/2
+    y1=(w-wc)/4
+    z0=(bh-s)
+    obj.drawpoly(x0-x1,y0-y1,z0,x0+x1/2,y0-y1,z0,x0+x1/2,y0-y1,-z0,x0-x1,y0-y1,-z0)
+    obj.drawpoly(x0+x1/2,y0-y1,-z0,x0+x1/2,y0-y1,z0,x0+x1,y0+y1,z0,x0+x1,y0+y1,-z0)
+    obj.drawpoly(x0-x1,y0-y1,-z0,x0+x1/2,y0-y1,-z0,x0+x1,y0+y1,-z0,x0-x1,y0-y1,-z0)
+    obj.drawpoly(x0+x1/2,y0-y1,z0,x0-x1,y0-y1,z0,x0-x1,y0-y1,z0,x0+x1,y0+y1,z0)
+    obj.drawpoly(x0-x1,y0-y1,z0,x0-x1,y0-y1,-z0,x0+x1,y0+y1,-z0,x0+x1,y0+y1,z0)
+
+ocr_fd={}
+  obj.load("figure","四角形",col1,h/n)
+  obj.effect()
+  local l=s/2
+  local m=h/2
+  local r=360/n
+  local ru,rv,pir = obj.w/n,obj.h,math.pi/180*r
+  for i=0,n-1 do
+    x0=l*math.cos(pir*(i+1))
+    x1=l*math.cos(pir*i)
+    y0=l*math.sin(pir*(i+1))
+    y1=l*math.sin(pir*i)
+    x2=m*math.cos(pir*(i+1))
+    x3=m*math.cos(pir*i)
+    y2=m*math.sin(pir*(i+1))
+    y3=m*math.sin(pir*i)
+    obj.drawpoly(x0,-w/2,y0,x2,-wc/2,y2,x3,-wc/2,y3,x1,-w/2,y1)
+  end
+  obj.drawpoly(ocr_fd)
+
+  uw = w/2-s/2*flip
+if(flip==1)then
+ocr_fd={}
+  obj.load("figure","四角形",col2,s/n)
+  obj.effect()
+  l=s/2
+  m=s/4
+  local ut = onoff * l
+  ru,rv = obj.w/n,obj.h
+  for i=0,n-1 do
+    x0=l*math.cos(pir*(i+1))
+    x1=l*math.cos(pir*i)
+    y0=l*math.sin(pir*(i+1))
+    y1=l*math.sin(pir*i)
+    x2=m*math.cos(pir*(i+1))
+    x3=m*math.cos(pir*i)
+    y2=m*math.sin(pir*(i+1))
+    y3=m*math.sin(pir*i)
+    obj.drawpoly(x0,uw,y0,x2,w/2,y2,x3,w/2,y3,x1,uw,y1)
+    if(ut>0)then
+	obj.drawpoly(x2,w/2-ut,y2,x2,w/2,y2,x3,w/2,y3,x3,w/2-ut,y3)
+    end
+  end
+  obj.drawpoly(ocr_fd)
+ocr_fd={}
+  obj.load("figure","四角形",col1,s/n)
+  obj.effect()
+  l=s/4
+  local uc = s/2
+  local ut = onoff * uc
+  ru,rv = obj.w/n,obj.h
+  for i=0,n-1 do
+    x0=l*math.cos(pir*(i+1))
+    x1=l*math.cos(pir*i)
+    y0=l*math.sin(pir*(i+1))
+    y1=l*math.sin(pir*i)
+    obj.drawpoly(x0,w/2-ut,y0,0,w/2+uc-ut,0,0,w/2+uc-ut,0,x1,w/2-ut,y1)
+  end
+else
+obj.load("figure","円",col2,s)
+x=obj.w/2
+y=obj.h/2
+obj.drawpoly(-x, w/2,-y,x, w/2,-y,x, w/2,y,-x, w/2,y)
+end
+
+ocr_fd={}
+  obj.load("figure","四角形",col2,s/n)
+  obj.effect()
+  l=s/2
+  ru,rv = obj.w/n,obj.h
+  for i=0,n-1 do
+    x0=l*math.cos(pir*(i+1))
+    x1=l*math.cos(pir*i)
+    y0=l*math.sin(pir*(i+1))
+    y1=l*math.sin(pir*i)
+    table.insert(ocr_fd,{x0,-wc/2,y0,x0,uw,y0,x1,uw,y1,x1,-wc/2,y1, ru*i,0,ru*(i+1),0,ru*(i+1),rv,ru*i,rv})
+  end
+  obj.drawpoly(ocr_fd)
+@本体2
+--track@s:基準サイズ,1,500,75,1
+--track@ocr_t1:高さ,1,1000,400,1
+--track@ocr_t2:キャップ幅,0,250,20,1
+--track@ocr_t3:引っ込め,0,100,0
+--color@col1:キャップ色,0x0000ff
+--color@col2:本体色,0xffffff
+--track@per:分割数,3,25,20,1
+--track@prt:キャップ割合,0,100,20
+--check@cap:キャップ,0
+--check@body:本体,0
+
+local w=math.max(ocr_t1,s*2)
+local h=s+math.min(ocr_t2,s/2)
+local bh=s+math.min(ocr_t2,s/3)
+local n=math.min(25,math.max(math.floor(per),3))
+local onoff=ocr_t3/100
+local wc=w*(50-prt)/100
+
+if(cap==1)then
+obj.load("figure","円",col1,h)
+x=obj.w/2
+y=obj.h/2
+obj.drawpoly(-x, -wc/2,-y,x, -wc/2,-y,x, -wc/2,y,-x, -wc/2,y)
+obj.load("figure","円",col1,s)
+x=obj.w/2
+y=obj.h/2
+obj.drawpoly(-x,-w/2,y,x,-w/2,y,x,-w/2,-y,-x,-w/2,-y)
+
+  obj.load("figure","四角形",col1,bh)
+    x0=bh/2
+    x1=(bh-s)
+    y0=-wc/2
+    y1=(w-wc)/4
+    z0=(bh-s)
+    obj.drawpoly(x0-x1,y0-y1,z0,x0+x1/2,y0-y1,z0,x0+x1/2,y0-y1,-z0,x0-x1,y0-y1,-z0)
+    obj.drawpoly(x0+x1/2,y0-y1,-z0,x0+x1/2,y0-y1,z0,x0+x1,y0+y1,z0,x0+x1,y0+y1,-z0)
+    obj.drawpoly(x0-x1,y0-y1,-z0,x0+x1/2,y0-y1,-z0,x0+x1,y0+y1,-z0,x0-x1,y0-y1,-z0)
+    obj.drawpoly(x0+x1/2,y0-y1,z0,x0-x1,y0-y1,z0,x0-x1,y0-y1,z0,x0+x1,y0+y1,z0)
+    obj.drawpoly(x0-x1,y0-y1,z0,x0-x1,y0-y1,-z0,x0+x1,y0+y1,-z0,x0+x1,y0+y1,z0)
+
+  obj.load("figure","四角形",col1,h/n)
+  obj.effect()
+  local l=s/2
+  local m=h/2
+  local r=360/n
+  local ru,rv,pir = obj.w/n,obj.h,math.pi/180*r
+  for i=0,n-1 do
+    x0=l*math.cos(pir*(i+1))
+    x1=l*math.cos(pir*i)
+    y0=l*math.sin(pir*(i+1))
+    y1=l*math.sin(pir*i)
+    x2=m*math.cos(pir*(i+1))
+    x3=m*math.cos(pir*i)
+    y2=m*math.sin(pir*(i+1))
+    y3=m*math.sin(pir*i)
+    table.insert(ocr_fd,{x0,-w/2,y0,x2,-wc/2,y2,x3,-wc/2,y3,x1,-w/2,y1, ru*i,0,ru*(i+1),0,ru*(i+1),rv,ru*i,rv})
+  end
+  obj.drawpoly(ocr_fd)
+end
+if(body==1)then
+  uw = w/2
+  local uc = s/2
+  wc=uw - s
+  ocr_fd={}
+  obj.load("figure","四角形",col2,s/n)
+  obj.effect()
+  l=s/2
+  m=s/4
+  local r=360/n
+  local ut = onoff * l
+  local ru,rv,rvm,pir = obj.w/n,obj.h*(100-prt)/100,obj.h,math.pi/180*r
+  for i=0,n-1 do
+    x0=l*math.cos(pir*(i+1))
+    x1=l*math.cos(pir*i)
+    y0=l*math.sin(pir*(i+1))
+    y1=l*math.sin(pir*i)
+    x2=m*math.cos(pir*(i+1))
+    x3=m*math.cos(pir*i)
+    y2=m*math.sin(pir*(i+1))
+    y3=m*math.sin(pir*i)
+    table.insert(ocr_fd,{x2,-uw/2,y2,x0,-wc/2,y0,x1,-wc/2,y1,x3,-uw/2,y3, ru*i,0,ru*(i+1),0,ru*(i+1),rv,ru*i,rv})
+    table.insert(ocr_fd,{x0,-wc/2,y0,x0,uw,y0,x1,uw,y1,x1,-wc/2,y1, ru*i,rv,ru*(i+1),rv,ru*(i+1),rvm,ru*i,rvm})
+    if(ut>0)then
+	table.insert(ocr_fd,{x2,-wc/2+ut,y2,x2,-wc/2,y2,x3,-wc/2,y3,x3,-wc/2+ut,y3, ru*i,rvm,ru*(i+1),rvm,ru*(i+1),rvm,ru*i,rvm})
+    end
+  end
+  obj.drawpoly(ocr_fd)
+  ocr_fd={}
+  obj.load("figure","四角形",col1,s/n)
+  obj.effect()
+  l=s/4
+  ru,rv = obj.w/n,obj.h
+  local ut = onoff * uc
+  for i=0,n-1 do
+    x0=l*math.cos(pir*(i+1))
+    x1=l*math.cos(pir*i)
+    y0=l*math.sin(pir*(i+1))
+    y1=l*math.sin(pir*i)
+    table.insert(ocr_fd,{x0,-uw/2+ut,y0,0,-uw/2-uc+ut,0,0,-uw/2-uc+ut,0,x1,-uw/2+ut,y1, ru*i,0,ru*(i+1),0,ru*(i+1),rv,ru*i,rv})
+  end
+  obj.drawpoly(ocr_fd)
+obj.load("figure","円",col2,s)
+x=obj.w/2
+y=obj.h/2
+obj.drawpoly(-x, uw,-y,x, uw,-y,x, uw,y,-x, uw,y)
+end
+@悪魔化足
+--color@colB:色B,0x000000
+--value@size:手size,30
+--track@bwt:太さ,0,500,7,1
+--check@maru:両端を丸める,0
+--track@A_t0:長さ,0,10000,300
+--track@A_t1:Z内角,-360,360,0
+--track@A_t2:Y内角,-360,360,0
+--track@Xangle:ねじれ,-360,360,0
+--value@BN:分割数,20
+--value@wt:太さ,0
+--check@maru:両端を丸める,0
+--value@CHA:描画方法(0-4),0
+--check@Ysw:Yスイッチ,0
+--check@Ycv:Y曲げない,0
+--check@Ocam:カメラ,0
+--value@SEC:内部,0
+--track@OCRRx:X軸,-360,360,0
+--track@OCRRy:Y軸,-360,360,0
+--track@OCRRz:Z軸,-360,360,0
+--track@OCRR:内部,1,6,1,1
+--track@r:半径,0,2000,150
+--track@YShift:Y調整,-7200,7200,0
+--track@per:縦横比,-1,1,0,0.01
+--track@minR:極径下限,0,2000,0
+--color@col:色,0xffff00
+--value@h:縦分割(2-120),12;
+--value@w:横分割(3-120),24
+--value@alias:アンチエイリアス,1
+--color@col2:靴色,0xffff00
+
+rotShift = math.rad(YShift)
+weight=wt/math.sqrt(2)
+l=math.floor(weight)/2
+-- check.
+  XX={}
+  YY={}
+  ZZ={}
+  TW={}
+  XX[0]=0
+  YY[0]=0
+  ZZ[0]=0
+      if Ycv==1 then
+  TW[0]=A_t2
+      else
+  TW[0]=0
+      end
+  XX[1]=-A_t0/2
+  YY[1]=A_t1/2
+      if Ysw==1 and Ycv==0 then
+      ZZ[1]=0
+      else
+      ZZ[1]=A_t2
+      end
+      if Ycv==1 then
+  TW[1]=Xangle/2+A_t2
+      else
+  TW[1]=Xangle/2
+      end
+  XX[2]=-A_t0/2
+  YY[2]=-A_t1/2
+  ZZ[2]=A_t2
+      if Ysw==1 and Ycv==0 then
+  TW[2]=Xangle/2-A_t2
+      elseif Ysw==0 and Ycv==1 then
+  TW[2]=Xangle/2+A_t2
+      else
+  TW[2]=Xangle/2
+      end
+  NN=2
+      if Ocam==1 then
+cam = obj.getoption("camera_param") -- カメラデータの取得
+local camr = 0
+local cmrad,cmXds,cmZds = 0,0,0
+local cmX = cam.x - cam.tx
+local cmZ = cam.z - cam.tz
+    cmXds = cmX+A_t2
+    cmZds = cmZ+Xangle
+cmrad = math.atan2(cmZds,cmXds)
+camr = math.deg(-cmrad + math.pi/2)-180
+  TW[0]=TW[0]+camr
+  TW[1]=TW[1]+camr
+  TW[2]=TW[2]+camr
+      end
+
+--三角形ポリゴン問題を防ぐために最小でも0.1になるように内部で強制調整
+--（トラックで最小値を0.1としてもよいのだが、ドラッグで値を調整するときに
+--　数値にコンマ１がつくのもなんか気持ち悪いかなと思って。）
+minR = math.max( 0.1, minR )
+
+  px,pz=1,1
+  px=math.max(-per,0)
+  pz=math.max(per,0)
+  px,pz=1-px,1-pz
+
+require("OCRUtil")
+
+-- 関数共通
+function PassXYZ(s) -- s<=1
+  Ns=NN*s
+  Ns1=math.floor(Ns)
+  Ns2=(Ns-Ns1)/2
+
+  if Ns1<=0 then
+    nx=Ax[1]*Ns2*Ns2+Bx[1]*Ns2+Cx[1]
+    ny=Ay[1]*Ns2*Ns2+By[1]*Ns2+Cy[1]
+    nz=Az[1]*Ns2*Ns2+Bz[1]*Ns2+Cz[1]
+    nt=At[1]*Ns2*Ns2+Bt[1]*Ns2+Ct[1]
+  elseif Ns1==NN-1 then
+    SS1=Ns2+0.5
+    nx=Ax[Ns1]*SS1*SS1+Bx[Ns1]*SS1+Cx[Ns1]
+    ny=Ay[Ns1]*SS1*SS1+By[Ns1]*SS1+Cy[Ns1]
+    nz=Az[Ns1]*SS1*SS1+Bz[Ns1]*SS1+Cz[Ns1]
+    nt=At[Ns1]*SS1*SS1+Bt[Ns1]*SS1+Ct[Ns1]
+  elseif s==1 then
+   nx=XX[NN]
+   ny=YY[NN]
+   nz=ZZ[NN]
+   nt=TW[NN]
+  else
+    SS1=Ns2+0.5
+    SS2=Ns2
+    RS=2*Ns2
+    nx=(Ax[Ns1]*SS1*SS1+Bx[Ns1]*SS1+Cx[Ns1])*(1-RS)+RS*(Ax[Ns1+1]*SS2*SS2+Bx[Ns1+1]*SS2+Cx[Ns1+1])
+    ny=(Ay[Ns1]*SS1*SS1+By[Ns1]*SS1+Cy[Ns1])*(1-RS)+RS*(Ay[Ns1+1]*SS2*SS2+By[Ns1+1]*SS2+Cy[Ns1+1])
+    nz=(Az[Ns1]*SS1*SS1+Bz[Ns1]*SS1+Cz[Ns1])*(1-RS)+RS*(Az[Ns1+1]*SS2*SS2+Bz[Ns1+1]*SS2+Cz[Ns1+1])
+    nt=(At[Ns1]*SS1*SS1+Bt[Ns1]*SS1+Ct[Ns1])*(1-RS)+RS*(At[Ns1+1]*SS2*SS2+Bt[Ns1+1]*SS2+Ct[Ns1+1])
+  end
+  return nx,ny,nz,nt
+end
+function Sourcream(bx0,bx1,bx2,bx3,bz0,bz1,bz2,bz3)
+  az={};ax={};
+  ax[0],ax[1],ax[2],ax[3]=bx0,bx1,bx2,bx3
+  az[0],az[1],az[2],az[3]=bz0,bz1,bz2,bz3
+    local ru = r/2
+  for cn=0,3 do
+    if(az[cn]>0) then
+    --後ろにも爪
+    local mau = math.abs(ax[cn])
+      if(mau>ru) then
+        az[cn]=az[cn]*0.55*px
+      elseif(mau==ru) then
+        az[cn]=az[cn]*0.65*px
+      elseif(mau>ru/2) then
+        az[cn]=az[cn]*0.75*px
+      elseif(mau==ru/2) then
+        az[cn]=az[cn]*px
+      else
+        az[cn]=az[cn]*1.25*px
+      end
+--debug_print(string.format(">0,x = %d, z = %d,",ax[cn],az[cn]))
+    elseif(az[cn]<0) then
+    --２本爪
+      local axbs = (ru-math.abs(ax[cn]))/ru
+      az[cn]=(az[cn]+az[cn]*(1-axbs))*px
+    end
+      ax[cn]=ax[cn]*pz
+  end
+  return ax[0],ax[1],ax[2],ax[3],az[0],az[1],az[2],az[3]
+end
+function ShiftR(iax,iay,iaz,ir)
+  abs=(iax*iax+iay*iay)^0.5
+  ibx,iby=iay/abs,-iax/abs
+  icx,icy,icz=iax*iaz,iay*iaz,-iax*iax-iay*iay
+  abs=(icx*icx+icy*icy+icz*icz)^0.5
+  icx,icy,icz=icx/abs,icy/abs,icz/abs
+  mc=math.cos(ir/180*math.pi)  
+  ms=math.sin(ir/180*math.pi)
+  return obj.w*(ibx*mc+icx*ms)/2,obj.w*(iby*mc+icy*ms)/2,obj.w*(icz*ms)/2
+end
+
+  for i=1,NN do
+    s1=YY[i]*math.pi/180
+    s2=(ZZ[i]+90)*math.pi/180
+    XX[i],YY[i],ZZ[i]=XX[i]*math.sin(s1)*math.sin(s2),-XX[i]*math.cos(s1),-XX[i]*math.sin(s1)*math.cos(s2)
+  end
+
+-- --------以降共通
+  for i=1,NN do
+    XX[i]=XX[i-1]+XX[i]
+    YY[i]=YY[i-1]+YY[i]
+    ZZ[i]=ZZ[i-1]+ZZ[i]
+  end
+
+  OFH=(1+obj.frame)/(1+obj.totalframe)
+
+  Ax={};Bx={};Cx={};
+  Ay={};By={};Cy={};
+  Az={};Bz={};Cz={};
+  At={};Bt={};Ct={};
+
+  for M=1,NN-1 do
+    Ax[M]=2*XX[M-1]-4*XX[M]+2*XX[M+1]
+    Bx[M]=-3*XX[M-1]+4*XX[M]-XX[M+1] 
+    Cx[M]=XX[M-1]
+    Ay[M]=2*YY[M-1]-4*YY[M]+2*YY[M+1]
+    By[M]=-3*YY[M-1]+4*YY[M]-YY[M+1] 
+    Cy[M]=YY[M-1]
+    Az[M]=2*ZZ[M-1]-4*ZZ[M]+2*ZZ[M+1]
+    Bz[M]=-3*ZZ[M-1]+4*ZZ[M]-ZZ[M+1] 
+    Cz[M]=ZZ[M-1]
+    At[M]=2*TW[M-1]-4*TW[M]+2*TW[M+1]
+    Bt[M]=-3*TW[M-1]+4*TW[M]-TW[M+1] 
+    Ct[M]=TW[M-1]
+  end
+
+  if CHA==0 then
+    Nmax=NN*BN
+    Nv=Nmax
+    Ama=0
+  elseif CHA==1 then
+    Nmax=math.floor(NN*BN*OFH)
+    Nv=NN*BN
+    Ama=NN*BN*OFH-Nmax
+  elseif CHA==2 then
+    Nmax=math.floor(NN*BN*OFH)
+    Nv=Nmax
+    Ama=NN*BN*OFH-Nmax
+  elseif CHA==3 then 
+    Nmax=math.floor(NN*BN*OFH)
+  else
+    Nmax=NN*BN
+  end
+
+if l>0 then
+--ライン描画
+obj.load("figure","四角形",col,l*8)
+  if OCRRikky==1 then
+	obj.ox,obj.oy,obj.oz=OCRRikkyx,OCRRikkyy,OCRRikkyz
+	obj.rx,obj.ry,obj.rz=OCRRikkyrx,OCRRikkyry,OCRRikkyrz
+  end
+obj.effect()
+
+if CHA<3 then
+ocr_fd={}
+  xf,yf,zf,tf = PassXYZ(0)
+  ix,iy,iz,it =PassXYZ(0.5/(NN*BN))
+  dx,dy,dz= ShiftR(ix-xf,iy-yf,iz-zf,TW[0])
+  x1,y1,z1 = xf+dx,yf+dy,zf+dz
+  x0,y0,z0 = xf-dx,yf-dy,zf-dz
+    for i=1,Nmax do
+      ix,iy,iz,it =PassXYZ(i/(NN*BN))
+      dx,dy,dz= ShiftR(ix-xf,iy-yf,iz-zf,it)
+      x2,y2,z2=ix+dx,iy+dy,iz+dz
+      x3,y3,z3=ix-dx,iy-dy,iz-dz
+      v1=obj.h*(1-(i)/(Nv+Ama))
+      v2=obj.h*(1-(i-1)/(Nv+Ama))
+      if SEC==1 then
+        table.insert(ocr_fd,{y0,z0,x0, y1,z1,x1, y2,z2,x2, y3,z3,x3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+      elseif SEC==2 then
+        table.insert(ocr_fd,{z0,y0,x0, z1,y1,x1, z2,y2,x2, z3,y3,x3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+      else
+        table.insert(ocr_fd,{x0,y0,z0, x1,y1,z1, x2,y2,z2, x3,y3,z3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+      end
+      x0,y0,z0=x3,y3,z3
+      x1,y1,z1=x2,y2,z2
+      xf,yf,zf=ix,iy,iz
+    end -- i
+  if Ama>0 then
+    ix,iy,iz,it =PassXYZ((Nmax+Ama)/(NN*BN))
+    dx,dy,dz= ShiftR(ix-xf,iy-yf,iz-zf,it)
+    x2,y2,z2=ix+dx,iy+dy,iz+dz
+    x3,y3,z3=ix-dx,iy-dy,iz-dz
+    v1=obj.h*(1-(Nmax+Ama)/(Nv+Ama))
+    v2=obj.h*(1-Nmax/(Nv+Ama))
+    if SEC==1 then
+      table.insert(ocr_fd,{y0,z0,x0, y1,z1,x1, y2,z2,x2, y3,z3,x3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+    elseif SEC==2 then
+      table.insert(ocr_fd,{z0,y0,x0, z1,y1,x1, z2,y2,x2, z3,y3,x3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+    else
+      table.insert(ocr_fd,{x0,y0,z0, x1,y1,z1, x2,y2,z2, x3,y3,z3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+    end
+  end
+  obj.drawpoly(ocr_fd)
+else -- cha<3
+  for i=0,Nmax do
+    obj.ox , obj.oy , obj.oz ,NL =PassXYZ(i/(NN*BN))
+    obj.draw()
+  end
+end
+
+--頂点の描画
+if maru==1 then
+ocr_fd={}
+  obj.load("figure","円",col,l*8)
+  if OCRRikky==1 then
+	obj.ox,obj.oy,obj.oz=OCRRikkyx,OCRRikkyy,OCRRikkyz
+	obj.rx,obj.ry,obj.rz=OCRRikkyrx,OCRRikkyry,OCRRikkyrz
+  end
+  obj.effect()
+  cw=l*4
+  for i=0,1 do
+    ix,iy,iz,it =PassXYZ(i/NN)
+    if SEC==1 then
+      table.insert(ocr_fd,{iy+cw,iz,ix+cw, iy+cw,iz,ix-cw, iy-cw,iz,ix-cw, iy-cw,iz,ix+cw, 0,0, obj.w,0, obj.w,obj.h, 0,obj.h})
+    elseif SEC==2 then
+      table.insert(ocr_fd,{iz,iy+cw,ix+cw, iz,iy+cw,ix-cw, iz,iy-cw,ix-cw, iz,iy-cw,ix+cw, 0,0, obj.w,0, obj.w,obj.h, 0,obj.h})
+    else
+      table.insert(ocr_fd,{ix+cw,iy+cw,iz, ix-cw,iy+cw,iz, ix-cw,iy-cw,iz, ix+cw,iy-cw,iz, 0,0, obj.w,0, obj.w,obj.h, 0,obj.h})
+    end
+  end -- i
+end
+  obj.drawpoly(ocr_fd)
+end
+-- ---------ここから違う
+--先端描画
+ocr_fd={}
+  obj.load("figure","四角形",col2,r*2)
+obj.setoption('antialias',alias)
+obj.effect()
+
+local OCRsx,OCRsy,OCRsz,OCRsrx,OCRsry,OCRsrz
+debug_print(string.format("OFH = %d, NN = %d, BN = %d",OFH,NN,BN))
+debug_print(string.format("Nmax = %d, Ama = %d, Nv = %d",Nmax,Ama,Nv))
+
+  if NN*BN*OFH<=1/2 then
+    inm=1/2
+  else
+    inm=NN*BN*OFH
+  end
+
+  if CHA==0 then inm=NN*BN end
+
+  xp,yp,zp,it = PassXYZ(inm/(NN*BN))
+  
+  if SEC==1 then
+    OCRsx = yp
+    OCRsy = zp
+    OCRsz = xp
+  elseif SEC==2 then
+    OCRsx = zp
+    OCRsy = yp
+    OCRsz = xp
+  else
+    OCRsx = xp
+    OCRsy = yp
+    OCRsz = zp
+  end
+ 
+  if OCRR>0 then
+local OCRDx,OCRDy,OCRDz,OCRsrx,OCRsry,OCRsrz
+  if OCRRikky==1 then
+  OCRsrx,OCRsry,OCRsrz = OCRRikkyrx,OCRRikkyrx,OCRRikkyrz
+  OCRDx=math.rad(OCRRikkyrx)
+  OCRDy=math.rad(OCRRikkyry)
+  OCRDz=math.rad(OCRRikkyrz)
+  else
+  OCRsrx,OCRsry,OCRsrz = obj.rx,obj.ry,obj.rz
+  if OCRsrx==nil then OCRsrx = 0 end
+  if OCRsry==nil then OCRsry = 0 end
+  
+   OCRDx=math.rad(OCRsrx)
+   OCRDy=math.rad(OCRsry)
+   OCRDz=math.rad(OCRsrz)
+  end
+debug_print(string.format("sx = %d, sy = %d, sz = %d",OCRsx,OCRsy,OCRsz))
+    if OCRR%2==1 then
+		obj.rx,obj.ry,obj.rz=OCRsrx + OCRRz,OCRsry + OCRRy,OCRsrz + OCRRx
+    else
+		obj.rx,obj.ry,obj.rz=OCRsrx + OCRRx,OCRsry + OCRRy,OCRsrz + OCRRz
+    end
+  OCRx,OCRy,OCRz=OCRRoll(OCRsx,OCRsy,OCRsz,OCRDx,OCRDy,OCRDz)
+  end
+  if OCRRikky==1 then
+	obj.ox,obj.oy,obj.oz=OCRx+OCRRikkyx,OCRy+OCRRikkyy+YShift,OCRz+OCRRikkyz
+  else
+	obj.ox,obj.oy,obj.oz=OCRx+obj.ox,OCRy+obj.oy+YShift,OCRz+obj.oz
+  end
+  
+w = math.max( 3, math.min( 120, math.floor(w) ) )
+h = math.max( 2, math.min( 120, math.floor(h) ) )
+
+deltaH = math.rad(180/h)
+deltaW = math.rad(360/w)
+deltaU = obj.w/w
+deltaV = obj.h/h
+
+for y=0,h-1 do
+  rotH0 = deltaH*y
+  rotHC = rotH0 + deltaH/2
+  rotH1 = rotH0 + deltaH
+
+  y0 = math.min( 0, (-r*math.cos(rotH0)) )
+  y1 = math.min( 0, (-r*math.cos(rotH1)) )
+
+  -- r0とr1をminRで下限制御
+  r0 =  math.max( minR, (r*math.sin(rotH0)) )
+  r1 =  math.max( minR, (r*math.sin(rotH1)) )
+
+  v0 = deltaV*y
+  v1 = deltaV*(y+1)
+
+  for x=0,w-1 do
+    rotW0= -deltaW*x + rotShift
+    rotWC = rotW0 - deltaW/2
+    rotW1 = rotW0 - deltaW
+
+    x0 =  r0*math.sin(rotW0)
+    x1 =  r0*math.sin(rotW1)
+    x2 =  r1*math.sin(rotW1)
+    x3 =  r1*math.sin(rotW0)
+    z0 =  r0*math.cos(rotW0)
+    z1 =  r0*math.cos(rotW1)
+    z2 =  r1*math.cos(rotW1)
+    z3 =  r1*math.cos(rotW0)
+    if OCRR>=5 then
+    x0,x1,x2,x3,z0,z1,z2,z3=Sourcream(x0,x1,x2,x3,z0,z1,z2,z3)
+    x0,x1,x2,x3=x0*-1,x1*-1,x2*-1,x3*-1
+    elseif OCRR-2<1 then
+    z0,z1,z2,z3,x0,x1,x2,x3=Sourcream(x0,x1,x2,x3,z0,z1,z2,z3)
+    x0,x1,x2,x3=x0*-1,x1*-1,x2*-1,x3*-1
+    else
+    x0,x1,x2,x3,z0,z1,z2,z3=Sourcream(x0,x1,x2,x3,z0,z1,z2,z3)
+    end
+    u0 = deltaU*x
+    u1 = deltaU*(x+1)
+    table.insert(ocr_fd,{x0,y0,z0,x1,y0,z1,x2,y1,z2,x3,y1,z3,u0,v0,u1,v0,u1,v1,u0,v1})
+  end
+end
+  obj.drawpoly(ocr_fd)
+  if OCRR>0 then
+  OCRR=0
+  end
+  if OCRRikky==1 then
+  OCRRikky=0
+  end

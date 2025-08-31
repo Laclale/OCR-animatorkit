@@ -140,7 +140,7 @@ debug_print(string.format("OFH = %d, NN = %d, BN = %d",OFH,NN,BN))
   Nhalf=math.floor(Nmax/2)
 
 --ライン描画
-ocr_fastdraw={}
+ocr_fd={}
 obj.load("figure","四角形",colA,l*8)
 obj.effect()
 
@@ -158,11 +158,11 @@ if CHA<3 then
       v1=obj.h*(1-(i)/(Nv+Ama))
       v2=obj.h*(1-(i-1)/(Nv+Ama))
       if SEC==1 then
-      table.insert(ocr_fastdraw,{y0,z0,x0, y1,z1,x1, y2,z2,x2, y3,z3,x3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+      table.insert(ocr_fd,{y0,z0,x0, y1,z1,x1, y2,z2,x2, y3,z3,x3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
       elseif SEC==2 then
-      table.insert(ocr_fastdraw,{z0,y0,x0, z1,y1,x1, z2,y2,x2, z3,y3,x3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+      table.insert(ocr_fd,{z0,y0,x0, z1,y1,x1, z2,y2,x2, z3,y3,x3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
       else
-      table.insert(ocr_fastdraw,{x0,y0,z0, x1,y1,z1, x2,y2,z2, x3,y3,z3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+      table.insert(ocr_fd,{x0,y0,z0, x1,y1,z1, x2,y2,z2, x3,y3,z3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
       end
       x0,y0,z0=x3,y3,z3
       x1,y1,z1=x2,y2,z2
@@ -176,14 +176,14 @@ if CHA<3 then
     v1=obj.h*(1-(Nmax+Ama)/(Nv+Ama))
     v2=obj.h*(1-Nmax/(Nv+Ama))
     if SEC==1 then
-    table.insert(ocr_fastdraw,{y0,z0,x0, y1,z1,x1, y2,z2,x2, y3,z3,x3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+    table.insert(ocr_fd,{y0,z0,x0, y1,z1,x1, y2,z2,x2, y3,z3,x3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
     elseif SEC==2 then
-    table.insert(ocr_fastdraw,{z0,y0,x0, z1,y1,x1, z2,y2,x2, z3,y3,x3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+    table.insert(ocr_fd,{z0,y0,x0, z1,y1,x1, z2,y2,x2, z3,y3,x3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
     else
-    table.insert(ocr_fastdraw,{x0,y0,z0, x1,y1,z1, x2,y2,z2, x3,y3,z3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+    table.insert(ocr_fd,{x0,y0,z0, x1,y1,z1, x2,y2,z2, x3,y3,z3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
     end
   end
-  obj.drawpoly(ocr_fastdraw)
+  obj.drawpoly(ocr_fd)
 else -- cha<3
   for i=0,Nhalf do
     obj.ox , obj.oy , obj.oz ,NL =PassXYZ(i/(NN*BN))
@@ -191,7 +191,7 @@ else -- cha<3
   end
 end
 
-ocr_fastdraw={}
+ocr_fd={}
 obj.load("figure","四角形",colB,l*8)
 obj.effect()
 
@@ -204,11 +204,11 @@ if CHA<3 then
       v1=obj.h*(1-(i)/(Nv+Ama))
       v2=obj.h*(1-(i-1)/(Nv+Ama))
       if SEC==1 then
-    table.insert(ocr_fastdraw,{y0,z0,x0, y1,z1,x1, y2,z2,x2, y3,z3,x3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+    table.insert(ocr_fd,{y0,z0,x0, y1,z1,x1, y2,z2,x2, y3,z3,x3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
       elseif SEC==2 then
-    table.insert(ocr_fastdraw,{z0,y0,x0, z1,y1,x1, z2,y2,x2, z3,y3,x3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+    table.insert(ocr_fd,{z0,y0,x0, z1,y1,x1, z2,y2,x2, z3,y3,x3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
       else
-    table.insert(ocr_fastdraw,{x0,y0,z0, x1,y1,z1, x2,y2,z2, x3,y3,z3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+    table.insert(ocr_fd,{x0,y0,z0, x1,y1,z1, x2,y2,z2, x3,y3,z3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
       end
       x0,y0,z0=x3,y3,z3
       x1,y1,z1=x2,y2,z2
@@ -222,14 +222,14 @@ if CHA<3 then
     v1=obj.h*(1-(Nmax+Ama)/(Nv+Ama))
     v2=obj.h*(1-Nmax/(Nv+Ama))
     if SEC==1 then
-    table.insert(ocr_fastdraw,{y0,z0,x0, y1,z1,x1, y2,z2,x2, y3,z3,x3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+    table.insert(ocr_fd,{y0,z0,x0, y1,z1,x1, y2,z2,x2, y3,z3,x3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
     elseif SEC==2 then
-    table.insert(ocr_fastdraw,{z0,y0,x0, z1,y1,x1, z2,y2,x2, z3,y3,x3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+    table.insert(ocr_fd,{z0,y0,x0, z1,y1,x1, z2,y2,x2, z3,y3,x3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
     else
-    table.insert(ocr_fastdraw,{x0,y0,z0, x1,y1,z1, x2,y2,z2, x3,y3,z3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+    table.insert(ocr_fd,{x0,y0,z0, x1,y1,z1, x2,y2,z2, x3,y3,z3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
     end
   end
-  obj.drawpoly(ocr_fastdraw)
+  obj.drawpoly(ocr_fd)
 else -- cha<3
   for i=Nhalf+1,Nmax do
     obj.ox , obj.oy , obj.oz ,NL =PassXYZ(i/(NN*BN))
@@ -239,7 +239,7 @@ end
 
 --頂点の描画
 if maru==1 then
-ocr_fastdraw={}
+ocr_fd={}
   obj.load("figure","円",colA,l*8)
   obj.effect()
 
@@ -247,14 +247,14 @@ ocr_fastdraw={}
   for i=0,1 do
     ix,iy,iz,it =PassXYZ(i/NN)
     if SEC==1 then
-    table.insert(ocr_fastdraw,{iy+cw,iz,ix+cw, iy+cw,iz,ix-cw, iy-cw,iz,ix-cw, iy-cw,iz,ix+cw, 0,0, obj.w,0, obj.w,obj.h, 0,obj.h})
+    table.insert(ocr_fd,{iy+cw,iz,ix+cw, iy+cw,iz,ix-cw, iy-cw,iz,ix-cw, iy-cw,iz,ix+cw, 0,0, obj.w,0, obj.w,obj.h, 0,obj.h})
     elseif SEC==2 then
-    table.insert(ocr_fastdraw,{iz,iy+cw,ix+cw, iz,iy+cw,ix-cw, iz,iy-cw,ix-cw, iz,iy-cw,ix+cw, 0,0, obj.w,0, obj.w,obj.h, 0,obj.h})
+    table.insert(ocr_fd,{iz,iy+cw,ix+cw, iz,iy+cw,ix-cw, iz,iy-cw,ix-cw, iz,iy-cw,ix+cw, 0,0, obj.w,0, obj.w,obj.h, 0,obj.h})
     else
-    table.insert(ocr_fastdraw,{ix+cw,iy+cw,iz, ix-cw,iy+cw,iz, ix-cw,iy-cw,iz, ix+cw,iy-cw,iz, 0,0, obj.w,0, obj.w,obj.h, 0,obj.h})
+    table.insert(ocr_fd,{ix+cw,iy+cw,iz, ix-cw,iy+cw,iz, ix-cw,iy-cw,iz, ix+cw,iy-cw,iz, 0,0, obj.w,0, obj.w,obj.h, 0,obj.h})
     end
   end -- i
-  obj.drawpoly(ocr_fastdraw)
+  obj.drawpoly(ocr_fd)
 end
 	OCRNextx,OCRNexty,OCRNextz,OCRNext = 0, 0, 0,1
         ix,iy,iz,it =PassXYZ(1)
@@ -570,7 +570,7 @@ debug_print(string.format("OFH = %d, NN = %d, BN = %d",OFH,NN,BN))
   Nhalf=math.floor(Nmax/2)
 
 --ライン描画
-ocr_fastdraw={}
+ocr_fd={}
 obj.load("figure","四角形",colA,l*8)
 obj.effect()
 obj.ox, obj.oy, obj.oz = arm_ox, arm_oy, arm_oz
@@ -591,11 +591,11 @@ if CHA<3 then
       v1=obj.h*(1-(i)/(Nv+Ama))
       v2=obj.h*(1-(i-1)/(Nv+Ama))
       if SEC==1 then
-      table.insert(ocr_fastdraw,{y0,z0,x0, y1,z1,x1, y2,z2,x2, y3,z3,x3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+      table.insert(ocr_fd,{y0,z0,x0, y1,z1,x1, y2,z2,x2, y3,z3,x3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
       elseif SEC==2 then
-      table.insert(ocr_fastdraw,{z0,y0,x0, z1,y1,x1, z2,y2,x2, z3,y3,x3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+      table.insert(ocr_fd,{z0,y0,x0, z1,y1,x1, z2,y2,x2, z3,y3,x3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
       else
-      table.insert(ocr_fastdraw,{x0,y0,z0, x1,y1,z1, x2,y2,z2, x3,y3,z3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+      table.insert(ocr_fd,{x0,y0,z0, x1,y1,z1, x2,y2,z2, x3,y3,z3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
       end
       x0,y0,z0=x3,y3,z3
       x1,y1,z1=x2,y2,z2
@@ -609,14 +609,14 @@ if CHA<3 then
     v1=obj.h*(1-(Nmax+Ama)/(Nv+Ama))
     v2=obj.h*(1-Nmax/(Nv+Ama))
     if SEC==1 then
-    table.insert(ocr_fastdraw,{y0,z0,x0, y1,z1,x1, y2,z2,x2, y3,z3,x3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+    table.insert(ocr_fd,{y0,z0,x0, y1,z1,x1, y2,z2,x2, y3,z3,x3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
     elseif SEC==2 then
-    table.insert(ocr_fastdraw,{z0,y0,x0, z1,y1,x1, z2,y2,x2, z3,y3,x3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+    table.insert(ocr_fd,{z0,y0,x0, z1,y1,x1, z2,y2,x2, z3,y3,x3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
     else
-    table.insert(ocr_fastdraw,{x0,y0,z0, x1,y1,z1, x2,y2,z2, x3,y3,z3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+    table.insert(ocr_fd,{x0,y0,z0, x1,y1,z1, x2,y2,z2, x3,y3,z3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
     end
   end
-  obj.drawpoly(ocr_fastdraw)
+  obj.drawpoly(ocr_fd)
 else -- cha<3
   for i=0,Nhalf do
     obj.ox , obj.oy , obj.oz ,NL =PassXYZ(i/(NN*BN))
@@ -624,7 +624,7 @@ else -- cha<3
   end
 end
 
-ocr_fastdraw={}
+ocr_fd={}
 obj.load("figure","四角形",colB,l*8)
 obj.effect()
 obj.ox, obj.oy, obj.oz = arm_ox, arm_oy, arm_oz
@@ -640,11 +640,11 @@ if CHA<3 then
       v1=obj.h*(1-(i)/(Nv+Ama))
       v2=obj.h*(1-(i-1)/(Nv+Ama))
       if SEC==1 then
-    table.insert(ocr_fastdraw,{y0,z0,x0, y1,z1,x1, y2,z2,x2, y3,z3,x3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+    table.insert(ocr_fd,{y0,z0,x0, y1,z1,x1, y2,z2,x2, y3,z3,x3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
       elseif SEC==2 then
-    table.insert(ocr_fastdraw,{z0,y0,x0, z1,y1,x1, z2,y2,x2, z3,y3,x3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+    table.insert(ocr_fd,{z0,y0,x0, z1,y1,x1, z2,y2,x2, z3,y3,x3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
       else
-    table.insert(ocr_fastdraw,{x0,y0,z0, x1,y1,z1, x2,y2,z2, x3,y3,z3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+    table.insert(ocr_fd,{x0,y0,z0, x1,y1,z1, x2,y2,z2, x3,y3,z3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
       end
       x0,y0,z0=x3,y3,z3
       x1,y1,z1=x2,y2,z2
@@ -658,14 +658,14 @@ if CHA<3 then
     v1=obj.h*(1-(Nmax+Ama)/(Nv+Ama))
     v2=obj.h*(1-Nmax/(Nv+Ama))
     if SEC==1 then
-    table.insert(ocr_fastdraw,{y0,z0,x0, y1,z1,x1, y2,z2,x2, y3,z3,x3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+    table.insert(ocr_fd,{y0,z0,x0, y1,z1,x1, y2,z2,x2, y3,z3,x3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
     elseif SEC==2 then
-    table.insert(ocr_fastdraw,{z0,y0,x0, z1,y1,x1, z2,y2,x2, z3,y3,x3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+    table.insert(ocr_fd,{z0,y0,x0, z1,y1,x1, z2,y2,x2, z3,y3,x3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
     else
-    table.insert(ocr_fastdraw,{x0,y0,z0, x1,y1,z1, x2,y2,z2, x3,y3,z3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
+    table.insert(ocr_fd,{x0,y0,z0, x1,y1,z1, x2,y2,z2, x3,y3,z3, 0,v2, obj.w,v2, obj.w,v1, 0,v1})
     end
   end
-  obj.drawpoly(ocr_fastdraw)
+  obj.drawpoly(ocr_fd)
 else -- cha<3
   for i=Nhalf+1,Nmax do
     obj.ox , obj.oy , obj.oz ,NL =PassXYZ(i/(NN*BN))
@@ -675,7 +675,7 @@ end
 
 --頂点の描画
 if maru==1 then
-ocr_fastdraw={}
+ocr_fd={}
   obj.load("figure","円",colA,l*8)
   obj.effect()
 obj.ox, obj.oy, obj.oz = arm_ox, arm_oy, arm_oz
@@ -686,14 +686,14 @@ obj.zoom,obj.alpha = arm_zoom,arm_alpha
   for i=0,1 do
     ix,iy,iz,it =PassXYZ(i/NN)
     if SEC==1 then
-    table.insert(ocr_fastdraw,{iy+cw,iz,ix+cw, iy+cw,iz,ix-cw, iy-cw,iz,ix-cw, iy-cw,iz,ix+cw, 0,0, obj.w,0, obj.w,obj.h, 0,obj.h})
+    table.insert(ocr_fd,{iy+cw,iz,ix+cw, iy+cw,iz,ix-cw, iy-cw,iz,ix-cw, iy-cw,iz,ix+cw, 0,0, obj.w,0, obj.w,obj.h, 0,obj.h})
     elseif SEC==2 then
-    table.insert(ocr_fastdraw,{iz,iy+cw,ix+cw, iz,iy+cw,ix-cw, iz,iy-cw,ix-cw, iz,iy-cw,ix+cw, 0,0, obj.w,0, obj.w,obj.h, 0,obj.h})
+    table.insert(ocr_fd,{iz,iy+cw,ix+cw, iz,iy+cw,ix-cw, iz,iy-cw,ix-cw, iz,iy-cw,ix+cw, 0,0, obj.w,0, obj.w,obj.h, 0,obj.h})
     else
-    table.insert(ocr_fastdraw,{ix+cw,iy+cw,iz, ix-cw,iy+cw,iz, ix-cw,iy-cw,iz, ix+cw,iy-cw,iz, 0,0, obj.w,0, obj.w,obj.h, 0,obj.h})
+    table.insert(ocr_fd,{ix+cw,iy+cw,iz, ix-cw,iy+cw,iz, ix-cw,iy-cw,iz, ix+cw,iy-cw,iz, 0,0, obj.w,0, obj.w,obj.h, 0,obj.h})
     end
   end -- i
-  obj.drawpoly(ocr_fastdraw)
+  obj.drawpoly(ocr_fd)
 end
 	OCRNextx,OCRNexty,OCRNextz,OCRNext = 0, 0, 0,1
         ix,iy,iz,it =PassXYZ(1)
