@@ -642,7 +642,7 @@ end
 --check@lowerCut:下限カット,1
 --check@maru:両端を丸める,0
 --check@flip:左右反転,0
-
+require("OCRuv")
 if audbuff then audioFile="audiobuffer" end
 volUpper = math.min(volUpper,8000)
 volLower = math.max(volLower,0)
@@ -903,7 +903,7 @@ for i=1,Nmax do
   x1 = x3
   y1 = y3
 end
-obj.drawpoly(ocr_fd)
+obj.drawpoly(ocr_filluv(ocr_fd,obj))
 if( teethofi == 0 and lineonly == 0 ) then
   obj.load("figure","円",0xff80ff,msz*2)
   --obj.setoption("blend",6)
@@ -956,7 +956,7 @@ for i=1,Nmax do
   x1 = x3
   y1 = y3
 end
-obj.drawpoly(ocr_fd)
+obj.drawpoly(ocr_filluv(ocr_fd,obj))
 
 --頂点の描画
 ocr_fd={}
@@ -967,7 +967,7 @@ for i=1-maru,Nmax-1+maru do
   x0,y0 = PassXYZ2(i/(NN*BN))
   table.insert(ocr_fd,{x0-l,y0-l,0,x0+l,y0-l,0,x0+l,y0+l,0,x0-l,y0+l,0})
 end
-obj.drawpoly(ocr_fd)
+obj.drawpoly(ocr_filluv(ocr_fd,obj))
 obj.setoption("blend",0)
 obj.load("tempbuffer")
 obj.effect()
@@ -1000,7 +1000,7 @@ obj.effect()
 --check@lowerCut:下限カット,1
 --check@maru:両端を丸める,0
 --check@flip:左右反転,0
-
+require("OCRuv")
 if audbuff then audioFile="audiobuffer" end
 volUpper = math.min(volUpper,8000)
 volLower = math.max(volLower,0)
