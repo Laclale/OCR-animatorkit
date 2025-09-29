@@ -335,6 +335,7 @@ if ocr_useBoneP==1 then
 require("rikky_parent_control")
 require("OCRUtil")
 end
+require("OCRuv")
 
 weight=bwt/math.sqrt(2)
 l=math.floor(weight)/2
@@ -464,6 +465,7 @@ debug_print(string.format("OFH = %d, NN = %d, BN = %d",OFH,NN,BN))
 
 --ライン描画
 ocr_fd={}
+ocr_fdt={}
 obj.load("figure","四角形",colA,l*8)
 obj.effect()
 
@@ -496,20 +498,20 @@ if i%4==3 then
   end
   npx,npy,npz = ix+npx,iy+npy,iz+npz
     if SEC==1 then
-	table.insert(ocr_fd,{ndy0,ndz0,ndx0, ndy1,ndz1,ndx1, npy,npz,npx, npy,npz,npx, 0,0, obj.w,0, owu,ohv, owu,ohv})
-	table.insert(ocr_fd,{npy,npz,npx, ndy1,ndz1,ndx1, ndy2,ndz2,ndx2, npy,npz,npx, owu,ohv, obj.w,0, obj.w,obj.h, owu,ohv})
-	table.insert(ocr_fd,{npy,npz,npx, npy,npz,npx, ndy2,ndz2,ndx2, ndy3,ndz3,ndx3, owu,ohv, owu,ohv, obj.w,obj.h, 0,obj.h})
-	table.insert(ocr_fd,{ndy0,ndz0,ndx0, npy,npz,npx, npy,npz,npx, ndy3,ndz3,ndx3, 0,0, owu,ohv, owu,ohv, 0,obj.h})
+	table.insert(ocr_fdt,ocr_trivert(ndy0,ndz0,ndx0,ndy1,ndz1,ndx1,npy,npz,npx,0,0,obj.w,0,owu,ohv))
+	table.insert(ocr_fdt,ocr_trivert(npy,npz,npx, ndy1,ndz1,ndx1, ndy2,ndz2,ndx2,owu,ohv, obj.w,0, obj.w,obj.h))
+	table.insert(ocr_fdt,ocr_trivert(npy,npz,npx,ndy2,ndz2,ndx2,ndy3,ndz3,ndx3,owu,ohv,obj.w,obj.h,0,obj.h))
+	table.insert(ocr_fdt,ocr_trivert(ndy0,ndz0,ndx0,npy,npz,npx,ndy3,ndz3,ndx3,0,0,owu,ohv,uc,vc))
     elseif SEC==2 then
-	table.insert(ocr_fd,{ndz0,ndy0,ndx0, ndz1,ndy1,ndx1, npz,npy,npx, npz,npy,npx, 0,0, obj.w,0, owu,ohv, owu,ohv})
-	table.insert(ocr_fd,{npz,npy,npx, ndz1,ndy1,ndx1, ndz2,ndy2,ndx2, npz,npy,npx, owu,ohv, obj.w,0, obj.w,obj.h, owu,ohv})
-	table.insert(ocr_fd,{npz,npy,npx, npz,npy,npx, ndz2,ndy2,ndx2, ndz3,ndy3,ndx3, owu,ohv, owu,ohv, obj.w,obj.h, 0,obj.h})
-	table.insert(ocr_fd,{ndz0,ndy0,ndx0, npz,npy,npx, npz,npy,npx, ndz3,ndy3,ndx3, 0,0, owu,ohv, owu,ohv, 0,obj.h})
+	table.insert(ocr_fdt,ocr_trivert(ndz0,ndy0,ndx0, ndz1,ndy1,ndx1, npz,npy,npx,0,0, obj.w,0, owu,ohv))
+	table.insert(ocr_fdt,ocr_trivert(npz,npy,npx, ndz1,ndy1,ndx1, ndz2,ndy2,ndx2,owu,ohv, obj.w,0, obj.w,obj.h))
+	table.insert(ocr_fdt,ocr_trivert(npz,npy,npx, ndz2,ndy2,ndx2, ndz3,ndy3,ndx3,owu,ohv, obj.w,obj.h, 0,obj.h))
+	table.insert(ocr_fdt,ocr_trivert(ndz0,ndy0,ndx0, npz,npy,npx,ndz3,ndy3,ndx3,0,0, owu,ohv,0,obj.h))
     else
-	table.insert(ocr_fd,{ndx0,ndy0,ndz0, ndx1,ndy1,ndz1, npx,npy,npz, npx,npy,npz, 0,0, obj.w,0, owu,ohv, owu,ohv})
-	table.insert(ocr_fd,{npx,npy,npz, ndx1,ndy1,ndz1, ndx2,ndy2,ndz2, npx,npy,npz, owu,ohv, obj.w,0, obj.w,obj.h, owu,ohv})
-	table.insert(ocr_fd,{npx,npy,npz, npx,npy,npz, ndx2,ndy2,ndz2, ndx3,ndy3,ndz3, owu,ohv, owu,ohv, obj.w,obj.h, 0,obj.h})
-	table.insert(ocr_fd,{ndx0,ndy0,ndz0, npx,npy,npz, npx,npy,npz, ndx3,ndy3,ndz3, 0,0, owu,ohv, owu,ohv, 0,obj.h})
+	table.insert(ocr_fdt,ocr_trivert(ndx0,ndy0,ndz0, ndx1,ndy1,ndz1, npx,npy,npz,0,0, obj.w,0, owu,ohv))
+	table.insert(ocr_fdt,ocr_trivert(npx,npy,npz, ndx1,ndy1,ndz1, ndx2,ndy2,ndz2,owu,ohv, obj.w,0, obj.w,obj.h))
+	table.insert(ocr_fdt,ocr_trivert(npx,npy,npz, ndx2,ndy2,ndz2, ndx3,ndy3,ndz3,owu,ohv, obj.w,obj.h, 0,obj.h))
+	table.insert(ocr_fdt,ocr_trivert(ndx0,ndy0,ndz0, npx,npy,npz,ndx3,ndy3,ndz3,0,0, owu,ohv,0,obj.h))
     end
 end
 	x0,y0,z0=x3,y3,z3
@@ -532,6 +534,15 @@ end
     end
   end
   obj.drawpoly(ocr_fd)
+  if #ocr_fdt>0 then
+    ocr_fdtt={}
+    for k, v in ipairs(ocr_fdt) do
+	for kk, vv in ipairs(v) do
+		table.insert(ocr_fdtt,vv)
+	end
+    end
+    obj.drawpoly(ocr_fdtt,3)
+  end
 else -- cha<3
   for i=0,Nhalf do
     obj.ox , obj.oy , obj.oz ,NL =PassXYZ(i/(NN*BN))
@@ -540,6 +551,7 @@ else -- cha<3
 end
 
 ocr_fd={}
+ocr_fdt={}
 obj.load("figure","四角形",colB,l*8)
 obj.effect()
 
@@ -567,20 +579,20 @@ if i%4==3 then
   end
   npx,npy,npz = ix+npx,iy+npy,iz+npz
     if SEC==1 then
-	table.insert(ocr_fd,{ndy0,ndz0,ndx0, ndy1,ndz1,ndx1, npy,npz,npx, npy,npz,npx, 0,0, obj.w,0, owu,ohv, owu,ohv})
-	table.insert(ocr_fd,{npy,npz,npx, ndy1,ndz1,ndx1, ndy2,ndz2,ndx2, npy,npz,npx, owu,ohv, obj.w,0, obj.w,obj.h, owu,ohv})
-	table.insert(ocr_fd,{npy,npz,npx, npy,npz,npx, ndy2,ndz2,ndx2, ndy3,ndz3,ndx3, owu,ohv, owu,ohv, obj.w,obj.h, 0,obj.h})
-	table.insert(ocr_fd,{ndy0,ndz0,ndx0, npy,npz,npx, npy,npz,npx, ndy3,ndz3,ndx3, 0,0, owu,ohv, owu,ohv, 0,obj.h})
+	table.insert(ocr_fdt,ocr_trivert(ndy0,ndz0,ndx0,ndy1,ndz1,ndx1,npy,npz,npx,0,0,obj.w,0,owu,ohv))
+	table.insert(ocr_fdt,ocr_trivert(npy,npz,npx, ndy1,ndz1,ndx1, ndy2,ndz2,ndx2,owu,ohv, obj.w,0, obj.w,obj.h))
+	table.insert(ocr_fdt,ocr_trivert(npy,npz,npx,ndy2,ndz2,ndx2,ndy3,ndz3,ndx3,owu,ohv,obj.w,obj.h,0,obj.h))
+	table.insert(ocr_fdt,ocr_trivert(ndy0,ndz0,ndx0,npy,npz,npx,ndy3,ndz3,ndx3,0,0,owu,ohv,uc,vc))
     elseif SEC==2 then
-	table.insert(ocr_fd,{ndz0,ndy0,ndx0, ndz1,ndy1,ndx1, npz,npy,npx, npz,npy,npx, 0,0, obj.w,0, owu,ohv, owu,ohv})
-	table.insert(ocr_fd,{npz,npy,npx, ndz1,ndy1,ndx1, ndz2,ndy2,ndx2, npz,npy,npx, owu,ohv, obj.w,0, obj.w,obj.h, owu,ohv})
-	table.insert(ocr_fd,{npz,npy,npx, npz,npy,npx, ndz2,ndy2,ndx2, ndz3,ndy3,ndx3, owu,ohv, owu,ohv, obj.w,obj.h, 0,obj.h})
-	table.insert(ocr_fd,{ndz0,ndy0,ndx0, npz,npy,npx, npz,npy,npx, ndz3,ndy3,ndx3, 0,0, owu,ohv, owu,ohv, 0,obj.h})
+	table.insert(ocr_fdt,ocr_trivert(ndz0,ndy0,ndx0, ndz1,ndy1,ndx1, npz,npy,npx,0,0, obj.w,0, owu,ohv))
+	table.insert(ocr_fdt,ocr_trivert(npz,npy,npx, ndz1,ndy1,ndx1, ndz2,ndy2,ndx2,owu,ohv, obj.w,0, obj.w,obj.h))
+	table.insert(ocr_fdt,ocr_trivert(npz,npy,npx, ndz2,ndy2,ndx2, ndz3,ndy3,ndx3,owu,ohv, obj.w,obj.h, 0,obj.h))
+	table.insert(ocr_fdt,ocr_trivert(ndz0,ndy0,ndx0, npz,npy,npx,ndz3,ndy3,ndx3,0,0, owu,ohv,0,obj.h))
     else
-	table.insert(ocr_fd,{ndx0,ndy0,ndz0, ndx1,ndy1,ndz1, npx,npy,npz, npx,npy,npz, 0,0, obj.w,0, owu,ohv, owu,ohv})
-	table.insert(ocr_fd,{npx,npy,npz, ndx1,ndy1,ndz1, ndx2,ndy2,ndz2, npx,npy,npz, owu,ohv, obj.w,0, obj.w,obj.h, owu,ohv})
-	table.insert(ocr_fd,{npx,npy,npz, npx,npy,npz, ndx2,ndy2,ndz2, ndx3,ndy3,ndz3, owu,ohv, owu,ohv, obj.w,obj.h, 0,obj.h})
-	table.insert(ocr_fd,{ndx0,ndy0,ndz0, npx,npy,npz, npx,npy,npz, ndx3,ndy3,ndz3, 0,0, owu,ohv, owu,ohv, 0,obj.h})
+	table.insert(ocr_fdt,ocr_trivert(ndx0,ndy0,ndz0, ndx1,ndy1,ndz1, npx,npy,npz,0,0, obj.w,0, owu,ohv))
+	table.insert(ocr_fdt,ocr_trivert(npx,npy,npz, ndx1,ndy1,ndz1, ndx2,ndy2,ndz2,owu,ohv, obj.w,0, obj.w,obj.h))
+	table.insert(ocr_fdt,ocr_trivert(npx,npy,npz, ndx2,ndy2,ndz2, ndx3,ndy3,ndz3,owu,ohv, obj.w,obj.h, 0,obj.h))
+	table.insert(ocr_fdt,ocr_trivert(ndx0,ndy0,ndz0, npx,npy,npz,ndx3,ndy3,ndz3,0,0, owu,ohv,0,obj.h))
     end
 end
 	x0,y0,z0=x3,y3,z3
@@ -603,6 +615,15 @@ end
     end
   end
   obj.drawpoly(ocr_fd)
+  if #ocr_fdt>0 then
+    ocr_fdtt={}
+    for k, v in ipairs(ocr_fdt) do
+	for kk, vv in ipairs(v) do
+		table.insert(ocr_fdtt,vv)
+	end
+    end
+    obj.drawpoly(ocr_fdtt,3)
+  end
 else -- cha<3
   for i=Nhalf+1,Nmax do
     obj.ox , obj.oy , obj.oz ,NL =PassXYZ(i/(NN*BN))
@@ -629,7 +650,7 @@ ocr_fd={}
   end -- i
   obj.drawpoly(ocr_fd)
 end
-	OCRNextx,OCRNexty,OCRNextz,OCRNext = 0, 0, 0,1
+	OCRNextx,OCRNexty,OCRNextz, OCRNext = 0, 0, 0,1
 	  ix,iy,iz,it =PassXYZ(1)
     if SEC==1 then
     OCRNextx,OCRNexty,OCRNextz = iy, iz, ix
@@ -1039,7 +1060,7 @@ end
 --track@OCRRx:X軸,-360,360,0
 --track@OCRRy:Y軸,-360,360,0
 --track@OCRRz:Z軸,-360,360,0
---track@OCRR:内部,1,6,1,1
+--track@OCRR:足_内部,1,6,1,1
 --track@r:半径,0,2000,150
 --track@YShift:Y調整,-7200,7200,0
 --track@per:縦横比,-1,1,0,0.01

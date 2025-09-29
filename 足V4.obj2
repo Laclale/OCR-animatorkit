@@ -13,10 +13,10 @@
 --track@OCRRx:X軸,-360,360,0
 --track@OCRRy:Y軸,-360,360,0
 --track@OCRRz:Z軸,-360,360,0
---track@OCRR:内部,1,6,1,1
+--track@OCRR:足_内部,1,6,1,1
 --track@r:半径,0,2000,150
 --track@YShift:Y調整,-7200,7200,0
---track@per:縦横比,-1,1,0,0.01
+--track@per:縦横比,-1,1,0,0.001
 --track@minR:極径下限,0,2000,0
 --color@col:色,0xffff00
 --value@h:縦分割(2-120),12;
@@ -289,8 +289,6 @@ obj.setoption('antialias',alias)
 obj.effect()
 
 local OCRsx,OCRsy,OCRsz,OCRsrx,OCRsry,OCRsrz
-debug_print(string.format("OFH = %d, NN = %d, BN = %d",OFH,NN,BN))
-debug_print(string.format("Nmax = %d, Ama = %d, Nv = %d",Nmax,Ama,Nv))
 
   if NN*BN*OFH<=1/2 then
     inm=1/2
@@ -304,15 +302,15 @@ debug_print(string.format("Nmax = %d, Ama = %d, Nv = %d",Nmax,Ama,Nv))
   
   if SEC==1 then
     OCRsx = yp
-    OCRsy = zp
+    OCRsy = zp+YShift
     OCRsz = xp
   elseif SEC==2 then
     OCRsx = zp
-    OCRsy = yp
+    OCRsy = yp+YShift
     OCRsz = xp
   else
     OCRsx = xp
-    OCRsy = yp
+    OCRsy = yp+YShift
     OCRsz = zp
   end
  
@@ -324,26 +322,26 @@ local OCRDx,OCRDy,OCRDz,OCRsrx,OCRsry,OCRsrz
   OCRDy=math.rad(OCRRikkyry)
   OCRDz=math.rad(OCRRikkyrz)
   else
-  OCRsrx,OCRsry,OCRsrz = obj.rx,obj.ry,obj.rz
-  if OCRsrx==nil then OCRsrx = 0 end
-  if OCRsry==nil then OCRsry = 0 end
+OCRsrx,OCRsry,OCRsrz = obj.getvalue("rx"),obj.getvalue("ry"),obj.getvalue("rz")
   
    OCRDx=math.rad(OCRsrx)
    OCRDy=math.rad(OCRsry)
    OCRDz=math.rad(OCRsrz)
   end
 debug_print(string.format("sx = %d, sy = %d, sz = %d",OCRsx,OCRsy,OCRsz))
+debug_print(string.format("srx = %d, sry = %d, srz = %d",OCRsrx,OCRsry,OCRsrz))
     if OCRR%2==1 then
-		obj.rx,obj.ry,obj.rz=OCRsrx + OCRRz,OCRsry + OCRRy,OCRsrz + OCRRx
+		obj.rx,obj.ry,obj.rz=-OCRsrx + OCRRz,-OCRsry + OCRRy,-OCRsrz + OCRRx
     else
-		obj.rx,obj.ry,obj.rz=OCRsrx + OCRRx,OCRsry + OCRRy,OCRsrz + OCRRz
+		obj.rx,obj.ry,obj.rz=-OCRsrx + OCRRx,-OCRsry + OCRRy,-OCRsrz + OCRRz
     end
   OCRx,OCRy,OCRz=OCRRoll(OCRsx,OCRsy,OCRsz,OCRDx,OCRDy,OCRDz)
   end
+debug_print(string.format("OCRx = %d, OCRy = %d, OCRz = %d",OCRx,OCRy,OCRz))
   if OCRRikky==1 then
-	obj.ox,obj.oy,obj.oz=OCRx+OCRRikkyx,OCRy+OCRRikkyy+YShift,OCRz+OCRRikkyz
+	obj.ox,obj.oy,obj.oz=OCRx+OCRRikkyx,OCRy+OCRRikkyy,OCRz+OCRRikkyz
   else
-	obj.ox,obj.oy,obj.oz=OCRx+obj.ox,OCRy+obj.oy+YShift,OCRz+obj.oz
+	obj.ox,obj.oy,obj.oz=OCRx+obj.ox,OCRy+obj.oy,OCRz+obj.oz
   end
   
 w = math.max( 3, math.min( 120, math.floor(w) ) )
