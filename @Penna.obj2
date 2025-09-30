@@ -475,11 +475,15 @@ if CHA<3 then
   dx,dy,dz= ShiftR(ix-xf,iy-yf,iz-zf,TW[0])
   x1,y1,z1 = xf+dx,yf+dy,zf+dz
   x0,y0,z0 = xf-dx,yf-dy,zf-dz
+  ndx1,ndy1,ndz1 = xf+dx/2,yf+dy/2,zf+dz/2
+  ndx0,ndy0,ndz0 = xf-dx/2,yf-dy/2,zf-dz/2
     for i=1,Nhalf do
 	ix,iy,iz,it =PassXYZ(i/(NN*BN))
 	dx,dy,dz= ShiftR(ix-xf,iy-yf,iz-zf,it)
 	x2,y2,z2=ix+dx,iy+dy,iz+dz
 	x3,y3,z3=ix-dx,iy-dy,iz-dz
+	ndx2,ndy2,ndz2=ix+dx/2,iy+dy/2,iz+dz/2
+	ndx3,ndy3,ndz3=ix-dx/2,iy-dy/2,iz-dz/2
 	v1=obj.h*(1-(i)/(Nv+Ama))
 	v2=obj.h*(1-(i-1)/(Nv+Ama))
 	if SEC==1 then
@@ -516,6 +520,8 @@ if i%4==3 then
 end
 	x0,y0,z0=x3,y3,z3
 	x1,y1,z1=x2,y2,z2
+	ndx0,ndy0,ndz0=ndx3,ndy3,ndz3
+	ndx1,ndy1,ndz1=ndx2,ndy2,ndz2
 	xf,yf,zf=ix,iy,iz
     end -- i
   if Ama>0 then
@@ -541,7 +547,7 @@ end
 		table.insert(ocr_fdtt,vv)
 	end
     end
-    obj.drawpoly(ocr_fdtt,3)
+    --obj.drawpoly(ocr_fdtt,3)
   end
 else -- cha<3
   for i=0,Nhalf do
@@ -561,6 +567,8 @@ if CHA<3 then
 	dx,dy,dz= ShiftR(ix-xf,iy-yf,iz-zf,it)
 	x2,y2,z2=ix+dx,iy+dy,iz+dz
 	x3,y3,z3=ix-dx,iy-dy,iz-dz
+	ndx2,ndy2,ndz2=ix+dx/2,iy+dy/2,iz+dz/2
+	ndx3,ndy3,ndz3=ix-dx/2,iy-dy/2,iz-dz/2
 	v1=obj.h*(1-(i)/(Nv+Ama))
 	v2=obj.h*(1-(i-1)/(Nv+Ama))
 	if SEC==1 then
@@ -597,6 +605,8 @@ if i%4==3 then
 end
 	x0,y0,z0=x3,y3,z3
 	x1,y1,z1=x2,y2,z2
+	ndx0,ndy0,ndz0=ndx3,ndy3,ndz3
+	ndx1,ndy1,ndz1=ndx2,ndy2,ndz2
 	xf,yf,zf=ix,iy,iz
     end -- i
   if Ama>0 then
@@ -622,7 +632,7 @@ end
 		table.insert(ocr_fdtt,vv)
 	end
     end
-    obj.drawpoly(ocr_fdtt,3)
+    --obj.drawpoly(ocr_fdtt,3)
   end
 else -- cha<3
   for i=Nhalf+1,Nmax do
@@ -1466,4 +1476,3 @@ end
   if OCRRikky==1 then
   OCRRikky=0
   end
-
