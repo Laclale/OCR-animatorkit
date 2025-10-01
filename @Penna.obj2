@@ -1051,10 +1051,6 @@ y=obj.h/2
 obj.drawpoly(-x, uw,-y,x, uw,-y,x, uw,y,-x, uw,y)
 end
 @悪魔化足
---color@colB:色B,0x000000
---value@size:手size,30
---track@bwt:太さ,0,500,7,1
---check@maru:両端を丸める,0
 --track@A_t0:長さ,0,10000,300
 --track@A_t1:Z内角,-360,360,0
 --track@A_t2:Y内角,-360,360,0
@@ -1080,10 +1076,12 @@ end
 --value@w:横分割(3-120),24
 --value@alias:アンチエイリアス,1
 --color@col2:靴色,0xffff00
+--track@inf_t:浸食率,0,100,100
 
 rotShift = math.rad(YShift)
 weight=wt/math.sqrt(2)
 l=math.floor(weight)/2
+Infection=inf_t/100
 -- check.
   XX={}
   YY={}
@@ -1180,7 +1178,7 @@ function PassXYZ(s) -- s<=1
   end
   return nx,ny,nz,nt
 end
-function Sourcream(bx0,bx1,bx2,bx3,bz0,bz1,bz2,bz3)
+function Sourcream(bz0,bz1,bz2,bz3,bx0,bx1,bx2,bx3)
   az={};ax={};
   ax[0],ax[1],ax[2],ax[3]=bx0,bx1,bx2,bx3
   az[0],az[1],az[2],az[3]=bz0,bz1,bz2,bz3
@@ -1190,21 +1188,21 @@ function Sourcream(bx0,bx1,bx2,bx3,bz0,bz1,bz2,bz3)
     --後ろにも爪
     local mau = math.abs(ax[cn])
       if(mau>ru) then
-        az[cn]=az[cn]*0.55*px
+        az[cn]=az[cn]*(1-0.45*Infection)*px
       elseif(mau==ru) then
-        az[cn]=az[cn]*0.65*px
+        az[cn]=az[cn]*(1-0.35*Infection)*px
       elseif(mau>ru/2) then
-        az[cn]=az[cn]*0.75*px
+        az[cn]=az[cn]*(1-0.25*Infection)*px
       elseif(mau==ru/2) then
         az[cn]=az[cn]*px
       else
-        az[cn]=az[cn]*1.25*px
+        az[cn]=az[cn]*(1+0.25*Infection)*px
       end
 --debug_print(string.format(">0,x = %d, z = %d,",ax[cn],az[cn]))
     elseif(az[cn]<0) then
     --２本爪
       local axbs = (ru-math.abs(ax[cn]))/ru
-      az[cn]=(az[cn]+az[cn]*(1-axbs))*px
+      az[cn]=(az[cn]+az[cn]*(1-axbs*Infection))*px
     end
       ax[cn]=ax[cn]*pz
   end

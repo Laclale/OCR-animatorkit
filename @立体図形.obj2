@@ -167,7 +167,7 @@ end
 --track@sxt:幅,0,4000,100,1
 --track@syt:高さ,0,4000,100,1
 --track@szt:奥行き,0,4000,100,1
---color@cc:0xffffff
+--color@cc:色,0xffffff
 sx,sy,sz=sxt/2,syt/2,szt/2
 s=math.max(sx,sy)
 
@@ -238,8 +238,7 @@ ouths = math.max(math.abs(iy),outs)
     y1=uu*math.sin(pir*i)
     table.insert(ocr_fd,{0,-u+iy,0,0,-u+iy,0,x0,-w+iy,y0,x1,-w+iy,y1})
   end
-  ocr_filluv(ocr_fd,obj)
-  obj.drawpoly(ocr_fd)
+  obj.drawpoly(ocr_filluv(ocr_fd,obj))
 
 @Pin
 --information:Pin【BFDIのPinがモチーフ】
@@ -272,8 +271,7 @@ ouths = math.max(hh+math.abs(iy),math.max(outs,insz))
     y1=l*math.sin(pir*i)
     table.insert(ocr_fd,{x0,-ww/2+iy,y0,x0,ww/2+iy,y0,x1,ww/2+iy,y1,x1,-ww/2+iy,y1})
   end
-  ocr_filluv(ocr_fd,obj)
-  obj.drawpoly(ocr_fd)
+  obj.drawpoly(ocr_filluv(ocr_fd,obj))
   ocr_fd={}
   obj.load("figure","四角形",col1,ouths)
   obj.effect()
@@ -291,8 +289,7 @@ ouths = math.max(hh+math.abs(iy),math.max(outs,insz))
     table.insert(ocr_fd,{x0,ww/2+iy,y0,x2,w/2,y2,x3,w/2,y3,x1,ww/2+iy,y1})
     table.insert(ocr_fd,{0,w/2+iy,0,0,w/2+iy,0,x3,w/2+iy,y3,x2,w/2+iy,y2})
   end
-  ocr_filluv(ocr_fd,obj)
-  obj.drawpoly(ocr_fd)
+  obj.drawpoly(ocr_filluv(ocr_fd,obj))
   ocr_fd={}
     -- 頂点を1-1-2-3でdrawpolyに渡すよう意識する。
   local u=w/2+ndlh
@@ -306,8 +303,7 @@ ouths = math.max(hh+math.abs(iy),math.max(outs,insz))
     y1=uu*math.sin(pir*i)
     table.insert(ocr_fd,{0,-u,0,0,-u,0,x0,-w/2,y0,x1,-w/2,y1})
   end
-  ocr_filluv(ocr_fd,obj)
-  obj.drawpoly(ocr_fd)
+  obj.drawpoly(ocr_filluv(ocr_fd,obj))
 
 @Rolly
 --information:Rolly【ロールケーキ】
@@ -710,8 +706,7 @@ for k=0,1 do
   ocr_fd={}
   obj.load("figure","四角形",col2,s/w)
   l=s/2
-  p=360/w
-  local pip=math.pi/180*p
+  local pip=math.pi*2/w
   for i=0,w-1 do
     x0=l*math.cos(pip*(i+1))
     x1=l*math.cos(pip*i)
@@ -817,8 +812,7 @@ obj.drawpoly(-x,-n/2,-y,x,-n/2,-y,x,-n/2,y,-x,-n/2,y)
     y1=l*math.sin(pir*i)
     table.insert(ocr_fd,{x0,-n/2,y0,x0,n/2,y0,x1,n/2,y1,x1,-n/2,y1})
   end
-  ocr_filluv(ocr_fd,obj)
-  obj.drawpoly(ocr_fd)
+  obj.drawpoly(ocr_filluv(ocr_fd,obj))
 end
 
 if nn>0 then
@@ -832,8 +826,7 @@ for k=0,1 do
   ocr_fd={}
   obj.load("figure","四角形",col2,s/w)
   l=s/2
-  p=360/w
-  local pip=math.pi/180*p
+  local pip=math.pi*2/w
   for i=0,w-1 do
     x0=l*math.cos(pip*(i+1))
     x1=l*math.cos(pip*i)
@@ -841,8 +834,7 @@ for k=0,1 do
     y1=l*math.sin(pip*i)
     table.insert(ocr_fd,{x0,0,y0,x0,nn,y0,x1,nn,y1,x1,0,y1})
   end
-  ocr_filluv(ocr_fd,obj)
-  obj.drawpoly(ocr_fd)
+  obj.drawpoly(ocr_filluv(ocr_fd,obj))
 end
 end
 
@@ -1318,11 +1310,8 @@ obj.effect()
 x0=s/2*(1-asx/100)
 y0,y1,y2,y3=ln/2,ln/4,ln*2,w
 z0=s/2*(1-asy/100)
-x1,x2,x3,x4=math.max(x0-h,0),math.max(x0-h*3/2,0),x0+h/5,x0+h*2/5
-z1,z2,z3=math.max(z0-h,0),z0+h/5,math.max(z0-h*5/4,0)
-
-x1,y1=s/2*(1-asx/100)+h*12/5,ln/4
-z1=(s/2*(1-asy/100))/2+h
+x1,x2,x3,x4=s/2*(1-asx/100)+h*12/5,math.max(x0-h*3/2,0),x0+h/5,x0+h*2/5
+z1,z2,z3=(s/2*(1-asy/100))/2+h,z0+h/5,math.max(z0-h*5/4,0)
 w1,w2=sf/2+h*2,-sf/2+h*2
 
 --開閉部に近い部分
