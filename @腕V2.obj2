@@ -15,7 +15,7 @@
 --track@p_numP:P親番号,1,100,1,1
 
 if ocr_useBoneP==1 then
-require("rikky_parent_control")
+require("rpc_load")
 require("OCRUtil")
 end
 
@@ -279,8 +279,6 @@ obj.effect()
   end
 
   if CHA==0 then inm=NN*BN end
-  
-debug_print(string.format("inm = %d, NN = %d, BN = %d",inm,NN,BN))
 
   xf,yf,zf,tf = PassXYZ((inm-1/2)/(NN*BN))
   ix,iy,iz,it = PassXYZ(inm/(NN*BN))
@@ -331,10 +329,10 @@ r_parent_info[p_numP].x = obj.getvalue("x") + OCRNextx
 r_parent_info[p_numP].y = obj.getvalue("y") + OCRNexty
 r_parent_info[p_numP].z = obj.getvalue("z") + OCRNextz
 
---角度はすでにトラックバーの値が含まれているのでそのままです
-r_parent_info[p_numP].rx = obj.rx
-r_parent_info[p_numP].ry = obj.ry
-r_parent_info[p_numP].rz = obj.rz
+--角度なおした
+r_parent_info[p_numP].rx = obj.getvalue("rx") + obj.rx
+r_parent_info[p_numP].ry = obj.getvalue("ry") + obj.ry
+r_parent_info[p_numP].rz = obj.getvalue("rz") + obj.rz
 
 --拡大率はトラックバーの値そのままが出てくるので100で割ります
 r_parent_info[p_numP].zoom = obj.zoom * obj.getvalue("zoom") * 0.01
@@ -342,6 +340,7 @@ r_parent_info[p_numP].zoom = obj.zoom * obj.getvalue("zoom") * 0.01
 --拡大率と透明度は足すのではなくかけて値をコピーします
 r_parent_info[p_numP].alpha = obj.alpha * obj.getvalue("alpha")
 --end
+debug_print(string.format("rx = %d, ry = %d, rz = %d",r_parent_info[p_numP].rx,r_parent_info[p_numP].ry,r_parent_info[p_numP].rz))
 end
 
 @Cあり
@@ -362,7 +361,7 @@ end
 --check@ocr_useBoneP:ボーン制御P,0
 --track@p_numP:P親番号,1,100,1,1
 
-require("rikky_parent_control")
+require("rpc_load")
 if ocr_useBoneP==1 then
 require("OCRUtil")
 end
@@ -776,10 +775,10 @@ r_parent_info[p_numP].x = obj.getvalue("x") + OCRNextx
 r_parent_info[p_numP].y = obj.getvalue("y") + OCRNexty
 r_parent_info[p_numP].z = obj.getvalue("z") + OCRNextz
 
---角度はすでにトラックバーの値が含まれているのでそのままです
-r_parent_info[p_numP].rx = obj.rx
-r_parent_info[p_numP].ry = obj.ry
-r_parent_info[p_numP].rz = obj.rz
+--角度なおした
+r_parent_info[p_numP].rx = obj.getvalue("rx") + obj.rx
+r_parent_info[p_numP].ry = obj.getvalue("ry") + obj.ry
+r_parent_info[p_numP].rz = obj.getvalue("rz") + obj.rz
 
 --拡大率はトラックバーの値そのままが出てくるので100で割ります
 r_parent_info[p_numP].zoom = obj.zoom * obj.getvalue("zoom") * 0.01

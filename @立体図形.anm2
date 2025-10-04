@@ -239,8 +239,8 @@ end -- end of if(kiriPat)
 @袋
 --track@r:外側半径,0,2000,150
 --track@r2:内半径率,0,100,50
---track@ocr_t2:変形率,-100,100,0
---track@ocr_t3:重心,-100,100,0
+--track@rShpct:変形率,-100,100,0
+--track@gst:重心,-100,100,0
 --dialog:縦分割数(2-120),divH=12;横分割数(3-120),divW=24;縦開始,startH=0;縦終了,endH=12;横開始,startW=0;横終了,endW=24;切り口の模様,kiriPat=0;切り口の色,kiriCol=0xffff00;内側の模様,inPat=0;
 
 -- ======================================
@@ -248,6 +248,8 @@ end -- end of if(kiriPat)
 -- ======================================
 
 require("OCRuv")
+gs = gst/100
+local rShpc = rShpct/100+1
 divW = math.max(3, math.min(120, math.floor(divW)))
 divH = math.max(2, math.min(120, math.floor(divH)))
 kiriPat = math.max(0, math.min(1, math.floor(kiriPat)))
@@ -744,7 +746,7 @@ end
 -- ======================================
 
 --していることは@C(子)と同じです
-require("rikky_parent_control")
+require("rpc_load")
 local child_info = r_parent_info[math.ceil(c_num)]
 if(child_info == nil) then
 	debug_print("info is null")

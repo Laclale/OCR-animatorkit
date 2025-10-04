@@ -804,7 +804,7 @@ obj.drawpoly(-x,-n/2,-y,x,-n/2,-y,x,-n/2,y,-x,-n/2,y)
   obj.load("figure","四角形",col1,s/w)
   obj.effect()
   local l=s/2
-  local pir=math.p*2/w
+  local pir=math.pi*2/w
   for i=0,w-1 do
     x0=l*math.cos(pir*(i+1))
     x1=l*math.cos(pir*i)
@@ -951,7 +951,8 @@ end
 h_inShift = 0
 -- ここはドリンク部分。
 if (r2 > 0) then
-local qr2,qr = r2 + (100 - r2)/2,r * qr2/100 --内側半径
+local qr2 = r2 + (100 - r2)/2
+local qr = r * qr2/100 --内側半径
   ocr_fd={}
   obj.load("figure", "四角形", col2, 1)
   obj.setoption("culling",cull)

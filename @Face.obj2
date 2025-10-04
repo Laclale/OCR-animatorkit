@@ -118,7 +118,7 @@ end
 --forループ内で使う変数をループの外に宣言します
 local i, ln, x, y, ux,uy, lx, ly,it,eyex,qx,qy,qz,sw,sh
 
-require("rikky_parent_control")
+require("rpc_load")
 require("OCRUtil")
 if lowa then
 	rikky_underparent()

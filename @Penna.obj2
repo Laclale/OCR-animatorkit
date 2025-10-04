@@ -332,7 +332,7 @@ end
 --track@p_numP:P親番号,1,100,1,1
 
 if ocr_useBoneP==1 then
-require("rikky_parent_control")
+require("rpc_load")
 require("OCRUtil")
 end
 require("OCRuv")
@@ -422,7 +422,6 @@ end
   end
 
   OFH=(1+obj.frame)/(1+obj.totalframe)
-debug_print(string.format("OFH = %d, NN = %d, BN = %d",OFH,NN,BN))
 
   Ax={};Bx={};Cx={};
   Ay={};By={};Cy={};
@@ -547,7 +546,7 @@ end
 		table.insert(ocr_fdtt,vv)
 	end
     end
-    --obj.drawpoly(ocr_fdtt,3)
+    obj.drawpoly(ocr_fdtt,3)
   end
 else -- cha<3
   for i=0,Nhalf do
@@ -555,6 +554,7 @@ else -- cha<3
     obj.draw()
   end
 end
+debug_print(string.format("Nhalf = %d",Nhalf))
 
 ocr_fd={}
 ocr_fdt={}
@@ -632,7 +632,7 @@ end
 		table.insert(ocr_fdtt,vv)
 	end
     end
-    --obj.drawpoly(ocr_fdtt,3)
+    obj.drawpoly(ocr_fdtt,3)
   end
 else -- cha<3
   for i=Nhalf+1,Nmax do
