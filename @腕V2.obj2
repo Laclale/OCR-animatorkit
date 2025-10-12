@@ -340,6 +340,7 @@ r_parent_info[p_numP].zoom = obj.zoom * obj.getvalue("zoom") * 0.01
 --拡大率と透明度は足すのではなくかけて値をコピーします
 r_parent_info[p_numP].alpha = obj.alpha * obj.getvalue("alpha")
 --end
+debug_print(string.format("p_numP = %d,",p_numP))
 debug_print(string.format("rx = %d, ry = %d, rz = %d",r_parent_info[p_numP].rx,r_parent_info[p_numP].ry,r_parent_info[p_numP].rz))
 end
 
@@ -771,9 +772,9 @@ local OCRDx,OCRDy,OCRDz,OCRsrx,OCRsry,OCRsrz
 --必要な情報は位置三方向、角度三方向、拡大率、透明度
 
 --位置はAviUtlの画面に対して絶対的な位置をコピーするのでトラックバーと相対的位置の和になります
-r_parent_info[p_numP].x = obj.getvalue("x") + OCRNextx
-r_parent_info[p_numP].y = obj.getvalue("y") + OCRNexty
-r_parent_info[p_numP].z = obj.getvalue("z") + OCRNextz
+r_parent_info[p_numP].x = obj.getvalue("x") + arm_ox + OCRNextx
+r_parent_info[p_numP].y = obj.getvalue("y") + arm_oy + OCRNexty
+r_parent_info[p_numP].z = obj.getvalue("z") + arm_oz + OCRNextz
 
 --角度なおした
 r_parent_info[p_numP].rx = obj.getvalue("rx") + obj.rx
