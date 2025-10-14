@@ -1126,8 +1126,8 @@ for i = 0,divH-1 do
   v1 = h*(i+1)
 
   for j = 0,divW-1 do
-    d = math.fmod(j, divW)
-    rotW0 = - deltaW * d + rotShift
+    dd = math.fmod(j, divW)
+    rotW0 = - deltaW * dd + rotShift
     rotW1 = rotW0 - deltaW
     rotWC = rotW0 - deltaW/2
 
