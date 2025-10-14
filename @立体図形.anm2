@@ -1061,13 +1061,13 @@ rotShift = math.rad(rShtr)
 
 -- 横開始番号は0～divWの範囲に。
 -- 横終了番号は開始番号～divW*2-1の範囲に。
-startW = math.max(0, math.min(divW,startWp))
-endW = math.max(startW,math.min(divW*2-1,endWp))
+--startW = math.max(0, math.min(divW,startWp))
+--endW = math.max(startW,math.min(divW*2-1,endWp))
 
 -- 縦開始番号は0～divHの範囲に。
 -- 縦終了番号は開始番号～divHの範囲に。
-startH = math.max(0, math.min(divH,startHp))
-endH = math.max(startH,math.min(divH,endHp))
+--startH = math.max(0, math.min(divH,startHp))
+--endH = math.max(startH,math.min(divH,endHp))
 
 -- 開始番号に０を指定した場合は1～div番まで描けばよい
 if(startW==0) then
