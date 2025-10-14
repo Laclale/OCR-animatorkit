@@ -202,7 +202,7 @@ local Oqy=ocr_t1 + Oqy
 local Oqz=ocr_t2 + Oqz
     obj.ox,obj.oy,obj.oz = Orx,Ory,Orz
     obj.cx,obj.cy,obj.cz = Oqx,Oqy,Oqz
-@回転移動
+@別座標で回転
 --track0:X,-2000,2000,0
 --track1:Y,-2000,2000,0
 --track2:Z,-2000,2000,0
@@ -218,7 +218,7 @@ require("OCRUtil")
   local Oqrz = math.rad(obj.rz)
 local Oqx,Oqy,Oqz = OCRRoll(Opx,Opy,Opz,Oqrx,Oqry,Oqrz)
     obj.ox,obj.oy,obj.oz,obj.rz = obj.ox + Oqx,obj.oy + Oqy,obj.oz + Oqz,obj.rz + Opr
-@別座標で回転
+@回転移動
 --track@Opx:X,-2000,2000,0
 --track@Opy:Y,-2000,2000,0
 --track@Opz:Z,-2000,2000,0
