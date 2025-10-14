@@ -152,7 +152,7 @@ for i = startH-1,endH-1 do
   v0,v1 = velUV(h,i)
 
   for j = startW-1,endW-1 do
-    d = math.mod(j, divW)
+    d = math.fmod(j, divW)
     rotW0 = - deltaW * d + rotShift
     rotW1 = rotW0 - deltaW
     rotWC = rotW0 - deltaW/2
@@ -350,7 +350,7 @@ for i = startH-1,endH-1 do
   v0,v1 = velUV(h,i)
 
   for j = startW-1,endW-1 do
-    d = math.mod(j, divW)
+    d = math.fmod(j, divW)
     rotW0 = - deltaW * d
     rotW1 = rotW0 - deltaW
 
@@ -532,7 +532,7 @@ y0_ih = y0h + h_inShift
 y1_ih = y1h + h_inShift
 
 for i=startN-1,endN-1 do
-  d = math.mod(i, div)
+  d = math.fmod(i, div)
   rot0 = -delta * d + rotShift
   rotC = rot0 - delta/2
   rot1 = rot0 - delta
@@ -1126,7 +1126,7 @@ for i = 0,divH-1 do
   v1 = h*(i+1)
 
   for j = 0,divW-1 do
-    d = math.mod(j, divW)
+    d = math.fmod(j, divW)
     rotW0 = - deltaW * d + rotShift
     rotW1 = rotW0 - deltaW
     rotWC = rotW0 - deltaW/2
@@ -1411,7 +1411,7 @@ for i = startH-1,endH-1 do
   v1 = h * (i+1)
 
   for j = startW-1,endW-1 do
-    d = math.mod(j, divW)
+    d = math.fmod(j, divW)
     rotW0 = - deltaW * d + rotShift
     rotW1 = rotW0 - deltaW
 
