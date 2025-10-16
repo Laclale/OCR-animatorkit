@@ -109,15 +109,15 @@ obj.effect()
 function velUV(h,i)--(h,i)(h * i,h * (i+1))
   local dh,rsu,rsd = divH/2,(1+gs),(1-gs)
   local oh = h*dh*rsu
-  debug_print(string.format("oh = %f, dh = %f, rsu = %f, rsd = %f",oh,dh,rsu,rsd))
+  --debug_print(string.format("oh = %f, dh = %f, rsu = %f, rsd = %f",oh,dh,rsu,rsd))
   if i>=dh then
-  debug_print(string.format("h1 = %f, h2 = %f",oh+h*rsd*(i-dh),oh+h*rsd*(i+1-dh)))
+  --debug_print(string.format("h1 = %f, h2 = %f",oh+h*rsd*(i-dh),oh+h*rsd*(i+1-dh)))
     return oh+h*rsd*(i-dh),oh+h*rsd*(i+1-dh)
   elseif (i+1)>=dh then
-  debug_print(string.format("h1 = %f, h2 = %f",h*rsu*i,oh+h*rsd*(i+1-dh)))
+  --debug_print(string.format("h1 = %f, h2 = %f",h*rsu*i,oh+h*rsd*(i+1-dh)))
     return h*rsu*i,oh+h*rsd*(i+1-dh)
   else
-  debug_print(string.format("h1 = %f, h2 = %f",h*rsu*i,h*rsu*(i+1)))
+  --debug_print(string.format("h1 = %f, h2 = %f",h*rsu*i,h*rsu*(i+1)))
     return h*rsu*i,h*rsu*(i+1)
   end
 end
@@ -1808,3 +1808,4 @@ if (futaPat == 1) then
     end
   end
 end
+
