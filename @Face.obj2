@@ -13,6 +13,7 @@
 --value@ebper:幅減少/分割,1
 --value@line:終点幅,0.1
 --check@maru:両端を丸くする,0
+--check@guide:ガイド,0
 
 BN,lnper=math.max(BN,0),math.max(lnper,0)
 ebper,line=math.max(ebper,0),math.max(line,0)
@@ -39,7 +40,11 @@ local sw,sh = s*2 + ln+line*2, s*3 + ln+line
 obj.setoption("drawtarget","tempbuffer",sw,sh)
 ocr_fd={}
 ocr_circlepaste={}
+if guide and guide>0 then
+obj.load("figure","四角形",ebcl,s,1)
+else
 obj.load("figure","四角形",ebcl,s)
+end
 obj.effect()
 obj.setoption("blend","alpha_max")
 
@@ -47,8 +52,10 @@ local ebx,eby,ly = ln/2,obj.h/2,obj.h/BN
 local eba,ebtilt = ebstart[i+1]-90,(ebend[i+1] - ebstart[i+1])/BN
 local uy,uy2=0,ly
 local eblx, ebly = anglepoint90(eba,ln)
-if maru then
+if maru and maru>0 then
 local m_ebx, m_eby = anglepoint(ebx,eby,eba,-ebx)
+debug_print(string.format("c:x = %d, y = %d",ebx+eblx,eby+ebly))
+debug_print(string.format("d:x = %d, y = %d",ebx-eblx,eby-ebly))
 table.insert(ocr_circlepaste,{
 m_ebx-eblx,m_eby-ebly,0,
 m_ebx+eblx,m_eby+ebly,0,
@@ -62,21 +69,27 @@ local ebx2, eby2 = anglepoint(ebx,eby,eba,lnper)
 local eblx2, ebly2 = anglepoint90(eba,ln)
 --anglepoint(px,py,angle,dist) dx,dy
 --anglepoint90(angle,size) dx,dy
+debug_print(string.format("a:x = %d, y = %d",ebx-eblx,eby-ebly))
+debug_print(string.format("b:x = %d, y = %d",ebx+eblx,eby+ebly))
 table.insert(ocr_fd,{ebx-eblx,eby-ebly,0,ebx+eblx,eby+ebly,0,ebx2+eblx2,eby2+ebly2,0,ebx2-eblx2,eby2-ebly2,0,0,uy, obj.w,uy, obj.w,uy2, 0,uy2})
 uy,uy2=uy + ly, uy2 + ly
 ebx, eby = ebx2, eby2
 eblx, ebly = eblx2, ebly2
 end
-if maru then
+if maru and maru>0 then
 local m_ebx, m_eby = anglepoint(ebx,eby,eba,line)
 table.insert(ocr_circlepaste,{ebx-eblx,eby-ebly,0,ebx+eblx,eby+ebly,0,m_ebx+eblx,m_eby+ebly,0,m_ebx-eblx,m_eby-ebly,0})
 end
 obj.drawpoly(ocr_fd)
-if maru then
+if maru and maru>0 then
+if guide and guide>0 then
+obj.load("figure","円",ebcl,line+ebper*BN,5)
+else
 obj.load("figure","円",ebcl,line+ebper*BN)
+end
 local cu, cv, cvh = obj.w, obj.h/2, obj.h
-ocr_insertuv(ocr_circlepaste[1],0,0,cu,cv,cu,cv,0,0)
-ocr_insertuv(ocr_circlepaste[2],0,cv,cu,cvh,cu,cvh,0,cv)
+ocr_insertuv(ocr_circlepaste[1],0,0,cu,0,cu,cv,0,cv)
+ocr_insertuv(ocr_circlepaste[2],0,cv,cu,cv,cu,cvh,0,cvh)
 obj.drawpoly(ocr_circlepaste)
 end
 obj.setoption("blend",0)
