@@ -1105,7 +1105,7 @@ obj.effect()
 -- 左端から順に描いて行く
 
 r_in = r * r2/100 --内側半径
-delta = math.rad(360/div)
+delta = math.rad(360/qw)
 w = obj.w / qw
 
   y0,y1 = 0 + bss,h + bss
