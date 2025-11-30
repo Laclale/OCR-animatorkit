@@ -7,6 +7,7 @@
 --color@mainCol:本体の色,0xffff00
 --track@ln:ライン率,0,100,50
 --track@div:丸め角数,1,30,6,1
+--group:蓋と内側
 --value@hBase:高さ基準,0
 --value@futa:蓋の有無,3
 --check@futaPat:蓋の模様,0

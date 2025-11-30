@@ -11,6 +11,7 @@
 --check@maru:両端を丸める,0
 --value@CHA:描画方法(0-4),0
 --value@SEC:内部,0
+--group:ボーン制御
 --check@ocr_useBoneP:ボーン制御P,0
 --track@p_numP:P親番号,1,100,1,1
 
@@ -357,6 +358,7 @@ end
 --check@maru:両端を丸める,0
 --value@CHA:描画方法(0-4),0
 --value@SEC:内部,0
+--group:ボーン制御
 --track@p_num:C親番号,1,100,1,1
 --value@arm_Cinfo:情報保存,nil;
 --check@ocr_useBoneP:ボーン制御P,0

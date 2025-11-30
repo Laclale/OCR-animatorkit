@@ -328,6 +328,7 @@ end
 --value@SEC:内部,0
 --track@h_len:腕ひれ,0,500,0
 --check@rev:ひれ反転,0;
+--group:ボーン制御
 --check@ocr_useBoneP:ボーン制御P,0
 --track@p_numP:P親番号,1,100,1,1
 
@@ -1051,6 +1052,7 @@ y=obj.h/2
 obj.drawpoly(-x, uw,-y,x, uw,-y,x, uw,y,-x, uw,y)
 end
 @悪魔化足
+--group:足A(関節絵画)
 --track@A_t0:長さ,0,10000,300
 --track@A_t1:Z内角,-360,360,0
 --track@A_t2:Y内角,-360,360,0
@@ -1063,10 +1065,12 @@ end
 --check@Ycv:Y曲げない,0
 --check@Ocam:カメラ,0
 --value@SEC:内部,0
+--group:足B(回転)
 --track@OCRRx:X軸,-360,360,0
 --track@OCRRy:Y軸,-360,360,0
 --track@OCRRz:Z軸,-360,360,0
 --track@OCRR:足_内部,1,6,1,1
+--group:足C(本体)
 --track@r:半径,0,2000,150
 --track@YShift:Y調整,-7200,7200,0
 --track@per:縦横比,-1,1,0,0.001

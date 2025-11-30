@@ -27,9 +27,9 @@ local function twistervert(uxa,uza,uxb,uzb,dxa,dza,dxb,dzb,uy,dy,twd,uvxa,uvya,u
 	elseif twd>0 then
 		table.insert(ocr_fdt,ocr_trivert(uxa,uy,uza,uxb,uy,uzb,dxa,dy,dza,uvxa,uvya,uvxb,uvya,uvxa,uvyb))
 		table.insert(ocr_fdt,ocr_trivert(uxb,uy,uzb,dxb,dy,dzb,dxa,dy,dza,uvxb,uvya,uvxb,uvyb,uvxa,uvyb))
-	else
+	else--この配置でバグる
 		table.insert(ocr_fdt,ocr_trivert(uxa,uy,uza,dxb,dy,dzb,dxa,dy,dza,uvxa,uvya,uvxb,uvyb,uvxa,uvyb))
-		table.insert(ocr_fdt,ocr_trivert(uxa,uy,xza,uxb,uy,xzb,dxb,dy,dzb,uvxa,uvya,uvxb,uvya,uvxb,uvyb))
+		table.insert(ocr_fdt,ocr_trivert(uxa,uy,uza,uxb,uy,uzb,dxb,dy,dzb,uvxa,uvya,uvxb,uvya,uvxb,uvyb))
 	end
 end
 

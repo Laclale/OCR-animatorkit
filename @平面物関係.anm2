@@ -115,6 +115,7 @@ camr = math.deg(-cmrad + math.pi/2)
 else
 camr = math.deg(-cmrad + math.pi/2)-180
 end
+--debug_print(string.format("rz:%d, rx:%d, ry:%d",obj.rz,obj.rx,obj.rx))
   if SEC==1 then
     obj.rz = camr+90+ocr_t1
   elseif SEC==2 then

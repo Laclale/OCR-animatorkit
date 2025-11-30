@@ -54,8 +54,8 @@ local uy,uy2=0,ly
 local eblx, ebly = anglepoint90(eba,ln)
 if maru and maru>0 then
 local m_ebx, m_eby = anglepoint(ebx,eby,eba,-ebx)
-debug_print(string.format("c:x = %d, y = %d",ebx+eblx,eby+ebly))
-debug_print(string.format("d:x = %d, y = %d",ebx-eblx,eby-ebly))
+--debug_print(string.format("c:x = %d, y = %d",ebx+eblx,eby+ebly))
+--debug_print(string.format("d:x = %d, y = %d",ebx-eblx,eby-ebly))
 table.insert(ocr_circlepaste,{
 m_ebx-eblx,m_eby-ebly,0,
 m_ebx+eblx,m_eby+ebly,0,
@@ -69,8 +69,8 @@ local ebx2, eby2 = anglepoint(ebx,eby,eba,lnper)
 local eblx2, ebly2 = anglepoint90(eba,ln)
 --anglepoint(px,py,angle,dist) dx,dy
 --anglepoint90(angle,size) dx,dy
-debug_print(string.format("a:x = %d, y = %d",ebx-eblx,eby-ebly))
-debug_print(string.format("b:x = %d, y = %d",ebx+eblx,eby+ebly))
+--debug_print(string.format("a:x = %d, y = %d",ebx-eblx,eby-ebly))
+--debug_print(string.format("b:x = %d, y = %d",ebx+eblx,eby+ebly))
 table.insert(ocr_fd,{ebx-eblx,eby-ebly,0,ebx+eblx,eby+ebly,0,ebx2+eblx2,eby2+ebly2,0,ebx2-eblx2,eby2-ebly2,0,0,uy, obj.w,uy, obj.w,uy2, 0,uy2})
 uy,uy2=uy + ly, uy2 + ly
 ebx, eby = ebx2, eby2

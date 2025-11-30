@@ -8,6 +8,7 @@
 --track@rShpct:変形率,-100,100,0
 --track@rShtr:軸回転,-7200,7200,0
 --track@gst:重心,-100,100,0
+--group:分割と内側
 --track@divH:縦分割数,2,120,12,1
 --track@divW:横分割数,3,120,24,1
 --value@startHp:縦開始,0
@@ -1808,4 +1809,3 @@ if (futaPat == 1) then
     end
   end
 end
-
