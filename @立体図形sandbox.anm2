@@ -1,61 +1,384 @@
-@宝石錐
---track@div:角数,3,120,6,1
---track@upr:上半径,0.1,2000,150
---track@uph:上高さ,0,2000,0
---track@mdrt:ねじれ割合,-50,50,0
---track@mdh:中高さ,0,2000,30
---track@dnr:下半径,0.1,2000,150
---track@dnh:下高さ,0,2000,300
-
+@曲線柱
+--group:座標A
+--track@ocr_ta0:R座標A,0,10000,0
+--track@ocr_ta1:θ座標A,-1800,1800,0
+--track@ocr_ta2:φ座標A,-3600,3600,0
+--track@ocr_ta3:ねじれA,-3600,3600,0
+--group:座標B
+--track0:R座標B,0,10000,100
+--track1:θ座標B,-1800,1800,0
+--track2:φ座標B,-3600,3600,0
+--track3:ねじれB,-3600,3600,0
+--group:基準線
+--track@BN:分割数,3,120,6,1
+--track@CHA:描画方法,0,4,0,1
+--check@TY:相対/絶対,0
+--check@TOPA:先端描画,0
+--check@APP:パス描画,0
+--color@PCOL:パス描画色1,0xff0000 
+--color@QCOL:パス描画色2,0x0000ff
+--dialog:フォーカス,foc=0;内部,SEC=0;
+--group:柱の設定
+--track@divr:角数,3,120,6,1
+--track@lnr:半径,0.1,2000,150
+--check@TOPft:先端蓋,0
+--check@BTMft:根元蓋,0
 require("OCRuv")
-local pir=math.pi*2/div
-local ut,v1=obj.w/div,obj.h/3
-local v2,v3=v1*2,obj.h
-local mdr=pir/100*mdrt
-local ux0,ux1,dy0,dy1,uy0,uy1,ux0,ux1,dx0,dx1
-local uz0,uz1,dz0,dz1
-	dy0=mdh/2
-	dy1=dy0+dnh
-	uy1=dy0*-1
-	uy0=uy1-uph
+local pir=360/div
+local iu = obj.w/div
+  XX={}  
+  YY={}
+  ZZ={}
+  TW={}
+  XX[0]=ocr_ta0
+  YY[0]=ocr_ta1
+  ZZ[0]=ocr_ta2
+  TW[0]=ocr_ta3
+  NN=0
+
+-- 関数共通
+function PassXYZ(s) -- s<=1
+  Ns=NN*s
+  Ns1=math.floor(Ns)
+  Ns2=(Ns-Ns1)/2
+
+  if Ns1<=0 then
+    nx=Ax[1]*Ns2*Ns2+Bx[1]*Ns2+Cx[1]
+    ny=Ay[1]*Ns2*Ns2+By[1]*Ns2+Cy[1]
+    nz=Az[1]*Ns2*Ns2+Bz[1]*Ns2+Cz[1]
+    nt=At[1]*Ns2*Ns2+Bt[1]*Ns2+Ct[1]
+  elseif Ns1==NN-1 then
+    SS1=Ns2+0.5
+    nx=Ax[Ns1]*SS1*SS1+Bx[Ns1]*SS1+Cx[Ns1]
+    ny=Ay[Ns1]*SS1*SS1+By[Ns1]*SS1+Cy[Ns1]
+    nz=Az[Ns1]*SS1*SS1+Bz[Ns1]*SS1+Cz[Ns1]
+    nt=At[Ns1]*SS1*SS1+Bt[Ns1]*SS1+Ct[Ns1]
+   elseif s==1 then
+    nx=XX[NN]
+    ny=YY[NN]
+    nz=ZZ[NN]
+    nt=TW[NN]
+  else
+    SS1=Ns2+0.5
+    SS2=Ns2
+    RS=2*Ns2
+    nx=(Ax[Ns1]*SS1*SS1+Bx[Ns1]*SS1+Cx[Ns1])*(1-RS)+RS*(Ax[Ns1+1]*SS2*SS2+Bx[Ns1+1]*SS2+Cx[Ns1+1])
+    ny=(Ay[Ns1]*SS1*SS1+By[Ns1]*SS1+Cy[Ns1])*(1-RS)+RS*(Ay[Ns1+1]*SS2*SS2+By[Ns1+1]*SS2+Cy[Ns1+1])
+    nz=(Az[Ns1]*SS1*SS1+Bz[Ns1]*SS1+Cz[Ns1])*(1-RS)+RS*(Az[Ns1+1]*SS2*SS2+Bz[Ns1+1]*SS2+Cz[Ns1+1])
+    nt=(At[Ns1]*SS1*SS1+Bt[Ns1]*SS1+Ct[Ns1])*(1-RS)+RS*(At[Ns1+1]*SS2*SS2+Bt[Ns1+1]*SS2+Ct[Ns1+1])
+  end
+  return nx,ny,nz,nt
+end
+
+function ShiftR(iax,iay,iaz,ir)
+  local ltn={}
+  abs=(iax*iax+iay*iay)^0.5
+  ibx,iby=iay/abs,-iax/abs
+  icx,icy,icz=iax*iaz,iay*iaz,-iax*iax-iay*iay
+  abs=(icx*icx+icy*icy+icz*icz)^0.5
+  icx,icy,icz=icx/abs,icy/abs,icz/abs
+  for i=0,div-1 do
+    mc=math.cos(ir/180*math.pi)  
+    ms=math.sin(ir/180*math.pi)
+    ltn[i]={lnr*(ibx*mc+icx*ms)/2,lnr*(iby*mc+icy*ms)/2,lnr*(icz*ms)/2}
+    ir=(ir+pir)%360
+  end
+  return ltn
+end
+
+obj.setoption("antialias",1)
+
+  NN=NN+1
+  XX[NN]=obj.track0
+  YY[NN]=obj.track1
+  ZZ[NN]=obj.track2
+  TW[NN]=obj.track3
+
+  for i=1,NN do
+    s1=YY[i]*math.pi/180
+    s2=(ZZ[i]+90)*math.pi/180
+    XX[i],YY[i],ZZ[i]=XX[i]*math.sin(s1)*math.sin(s2),-XX[i]*math.cos(s1),-XX[i]*math.sin(s1)*math.cos(s2)
+  end
+
+if SEC==1 and CHA<3 then
+  for i=0,NN do
+    XX[i],YY[i],ZZ[i]=ZZ[i],XX[i],YY[i]
+    TW[i]=TW[i]+90
+  end
+elseif SEC==2 and CHA<3 then
+  for i=0,NN do
+    XX[i],ZZ[i]=ZZ[i],XX[i]
+    TW[i]=TW[i]+90
+  end
+end
+
+-- --------以降共通
+
+obj.effect()
+
+
+  if TY==0 then
+    for i=1,NN do
+      XX[i]=XX[i-1]+XX[i]
+      YY[i]=YY[i-1]+YY[i]
+      ZZ[i]=ZZ[i-1]+ZZ[i]
+    end
+  end
+
+  OFH=(1+obj.frame)/(1+obj.totalframe)
+
+  Ax={};Bx={};Cx={};
+  Ay={};By={};Cy={};
+  Az={};Bz={};Cz={};
+  At={};Bt={};Ct={};
+
+  for M=1,NN-1 do
+    Ax[M]=2*XX[M-1]-4*XX[M]+2*XX[M+1]
+    Bx[M]=-3*XX[M-1]+4*XX[M]-XX[M+1] 
+    Cx[M]=XX[M-1]
+    Ay[M]=2*YY[M-1]-4*YY[M]+2*YY[M+1]
+    By[M]=-3*YY[M-1]+4*YY[M]-YY[M+1] 
+    Cy[M]=YY[M-1]
+    Az[M]=2*ZZ[M-1]-4*ZZ[M]+2*ZZ[M+1]
+    Bz[M]=-3*ZZ[M-1]+4*ZZ[M]-ZZ[M+1] 
+    Cz[M]=ZZ[M-1]
+    At[M]=2*TW[M-1]-4*TW[M]+2*TW[M+1]
+    Bt[M]=-3*TW[M-1]+4*TW[M]-TW[M+1] 
+    Ct[M]=TW[M-1]
+  end
+
+  if CHA==0 then
+    Nmax=NN*BN
+    Nv=Nmax
+    Ama=0
+  elseif CHA==1 then
+    Nmax=math.floor(NN*BN*OFH)
+    Nv=NN*BN
+    Ama=NN*BN*OFH-Nmax
+  elseif CHA==2 then
+    Nmax=math.floor(NN*BN*OFH)
+    Nv=Nmax
+    Ama=NN*BN*OFH-Nmax
+  elseif CHA==3 then 
+    Nmax=math.floor(NN*BN*OFH)
+  else
+    Nmax=NN*BN
+  end
+
+
+if CHA<3 then
 ocr_fd={}
 ocr_fdt={}
-local function twistervert(uxa,uza,uxb,uzb,dxa,dza,dxb,dzb,uy,dy,twd,uvxa,uvya,uvxb,uvyb)
---ux0,uz0,ux1,uz1,dx0,dz0,dx1,dz1,uy1,dy0,mdrt,u0,v1,u1,v2
-	if twd==0 then
-		table.insert(ocr_fd,{uxa,uy,uza,uxb,uy,uzb,dxb,dy,dzb,dxa,dy,dza,uvxa,uvya,uvxb,uvya,uvxb,uvyb,uvxa,uvyb})
-	elseif twd>0 then
-		table.insert(ocr_fdt,ocr_trivert(uxa,uy,uza,uxb,uy,uzb,dxa,dy,dza,uvxa,uvya,uvxb,uvya,uvxa,uvyb))
-		table.insert(ocr_fdt,ocr_trivert(uxb,uy,uzb,dxb,dy,dzb,dxa,dy,dza,uvxb,uvya,uvxb,uvyb,uvxa,uvyb))
-	else--この配置でバグる
-		table.insert(ocr_fdt,ocr_trivert(uxa,uy,uza,dxb,dy,dzb,dxa,dy,dza,uvxa,uvya,uvxb,uvyb,uvxa,uvyb))
-		table.insert(ocr_fdt,ocr_trivert(uxa,uy,uza,uxb,uy,uzb,dxb,dy,dzb,uvxa,uvya,uvxb,uvya,uvxb,uvyb))
-	end
+function circTri(tb,dir,xf,yf,zf,v1,v2)
+  u1=0
+  uc=iu/2
+  u2=iu
+  for i=0,div-1 do
+    dx0,dy0,dz0= tb[i]
+    dx1,dy1,dz1= tb[i+1]
+    x1,y1,z1 = xf+dx1,yf+dy1,zf+dz1
+    x0,y0,z0 = xf+dx0,yf+dy0,zf+dz0
+
+    --時計回り、四角は頂点を1-1-2-3
+    if dir==1 then
+    if SEC==1 then
+	table.insert(ocr_fdt,ocr_trivert(yf,zf,xf,y0,z0,x0, y1,z1,x1,uc,v2,u1,v1,u2,v1))
+    elseif SEC==2 then
+	table.insert(ocr_fdt,ocr_trivert(zf,yf,xf,z0,y0,x0, z1,y1,x1,uc,v2,u1,v1,u2,v1)
+    else
+	table.insert(ocr_fdt,ocr_trivert(xf,yf,zf,x0,y0,z0, x1,y1,z1,uc,v2,u1,v1,u2,v1))
+    end
+    else
+    if SEC==1 then
+	table.insert(ocr_fdt,ocr_trivert(y1,z1,x1,y0,z0,x0,yf,zf,xf, u2,v1,u1,v1,uc,v2))
+    elseif SEC==2 then
+	table.insert(ocr_fdt,ocr_trivert(z1,y1,x1,z0,y0,x0,zf,yf,xf, u2,v1,u1,v1,uc,v2))
+    else
+	table.insert(ocr_fdt,ocr_trivert(x1,y1,z1,x0,y0,z0,xf,yf,zf, u2,v1,u1,v1,uc,v2))
+    end
+    end
+    u1=u1+iu
+    uc=uc+iu
+    u2=u2+iu
+  end
+end
+function secFast(tb0,tb1,xf,yf,zf,ix,iy,iz,v1,v2)
+  u1=0
+  u2=iu
+  for i=0,div-1 do
+    dx0,dy0,dz0= tb0[i]
+    dx1,dy1,dz1= tb0[i+1]
+    x1,y1,z1 = xf+dx1,yf+dy1,zf+dz1
+    x0,y0,z0 = xf+dx0,yf+dy0,zf+dz0
+    dx0,dy0,dz0= tb1[i]
+    dx1,dy1,dz1= tb1[i+1]
+    x2,y2,z2=ix+dx1,iy+dy1,iz+dz1
+    x3,y3,z3=ix+dx0,iy+dy0,iz+dz0
+    if SEC==1 then
+      table.insert(ocr_fd,{y0,z0,x0, y1,z1,x1, y2,z2,x2, y3,z3,x3, u1,v2, u2,v2, u2,v1, u1,v1})
+    elseif SEC==2 then
+      table.insert(ocr_fd,{z0,y0,x0, z1,y1,x1, z2,y2,x2, z3,y3,x3, u1,v2, u2,v2, u2,v1, u1,v1})
+    else
+      table.insert(ocr_fd,{x0,y0,z0, x1,y1,z1, x2,y2,z2, x3,y3,z3, u1,v2, u2,v2, u2,v1, u1,v1})
+    end
+    u1=u1+iu
+    u2=u2+iu
+  end
 end
 
-for i=0,div-1 do
-	u1=ut*(i+1)
-	u0=ut*i
-	ux1=-upr*math.cos(pir*(i+1)-mdr)
-	ux0=-upr*math.cos(pir*i-mdr)
-	dx1=-dnr*math.cos(pir*(i+1)+mdr)
-	dx0=-dnr*math.cos(pir*i+mdr)
-	uz1=-upr*math.sin(pir*(i+1)-mdr)
-	uz0=-upr*math.sin(pir*i-mdr)
-	dz1=-dnr*math.sin(pir*(i+1)+mdr)
-	dz0=-dnr*math.sin(pir*i+mdr)
-	table.insert(ocr_fd,{0,uy0,0,0,uy0,0,ux1,uy1,uz1,ux0,uy1,uz0,u0,0,u1,0,u1,v1,u0,v1})
-	twistervert(ux0,uz0,ux1,uz1,dx0,dz0,dx1,dz1,uy1,dy0,mdrt,u0,v1,u1,v2)
-	table.insert(ocr_fd,{0,dy1,0,0,dy1,0,dx0,dy0,dz0,dx1,dy0,dz1,u1,v3,u0,v3,u0,v2,u1,v2})
-	--時計回り、頂点を1-1-2-3
-end
+  if TOPA==0 then
+    xf,yf,zf,tf = PassXYZ(0)
+    ix,iy,iz,it =PassXYZ(0.5/(NN*BN))
+    shrt0 = ShiftR(ix-xf,iy-yf,iz-zf,TW[0])
+    --根元は中心から
+    if BTMft==1 then
+      v1=obj.h*(1-1/(Nv+Ama))
+      v2=obj.h*(1-0/(Nv+Ama))
+      circTri(shrt0,1,xf,yf,zf,v1,v2)
+    end
+
+    for i=1,Nmax do
+      ix,iy,iz,it =PassXYZ(i/(NN*BN))
+      shrt1= ShiftR(ix-xf,iy-yf,iz-zf,it)
+      v1=obj.h*(1-(i)/(Nv+Ama))
+      v2=obj.h*(1-(i-1)/(Nv+Ama))
+
+      secFast(shrt0,shrt1,xf,yf,zf,ix,iy,iz,v1,v2)
+
+      xf,yf,zf=ix,iy,iz
+      shrt0 = shrt1
+    end -- i
+
+    if Ama>0 then
+      ix,iy,iz,it =PassXYZ((Nmax+Ama)/(NN*BN))
+      shrt1= ShiftR(ix-xf,iy-yf,iz-zf,it)
+      v1=obj.h*(1-(Nmax+Ama)/(Nv+Ama))
+      v2=obj.h*(1-Nmax/(Nv+Ama))
+
+      secFast(shrt0,shrt1,xf,yf,zf,ix,iy,iz,v1,v2)
+      --先端は中心まで
+    end
+    if TOPft==1 then
+      ix,iy,iz,it =PassXYZ((Nmax+Ama)/(NN*BN))
+      shrt1= ShiftR(ix-xf,iy-yf,iz-zf,it)
+      v1=obj.h*(1-(Nmax+Ama)/(Nv+Ama))
+      v2=obj.h*(1-Nmax/(Nv+Ama))
+      circTri(shrt1,0,ix,iy,iz,v1,v2)
+    end
 obj.drawpoly(ocr_fd)
-if #ocr_fdt>0 then
-	ocr_fdtt={}
-	for k, v in ipairs(ocr_fdt) do
-		for kk, vv in ipairs(v) do
-			table.insert(ocr_fdtt,vv)
-		end
+  if #ocr_fdt>0 then
+    ocr_fdtt={}
+    for k, v in ipairs(ocr_fdt) do
+	for kk, vv in ipairs(v) do
+		table.insert(ocr_fdtt,vv)
 	end
-	obj.drawpoly(ocr_fdtt,3)
+    end
+    obj.drawpoly(ocr_fdtt,3)
+  end
+
+  else --TOPA==0
+
+    if NN*BN*OFH<=1/2 then
+      inm=1/2
+    else
+      inm=NN*BN*OFH
+    end
+
+    if CHA==0 then inm=NN*BN end
+
+    xf,yf,zf,tf = PassXYZ((inm-1/2)/(NN*BN))
+    ix,iy,iz,it =PassXYZ(inm/(NN*BN))
+
+    dx,dy,dz=ix-xf,iy-yf,iz-zf
+    kika=obj.h/(dx*dx+dy*dy+dz*dz)^0.5/2
+    dx,dy,dz=dx*kika,dy*kika,dz*kika
+
+    xf,yf,zf=ix-dx,iy-dy,iz-dz
+    ix,iy,iz=ix+dx,iy+dy,iz+dz
+    shrt= ShiftR(dx,dy,dz,it)
+    dx,dy,dz= shrt[0]
+
+    x3,y3,z3 = xf-dx,yf-dy,zf-dz
+    x2,y2,z2 = xf+dx,yf+dy,zf+dz
+    x1,y1,z1 = ix+dx,iy+dy,iz+dz
+    x0,y0,z0 = ix-dx,iy-dy,iz-dz
+    if SEC==1 then
+      obj.drawpoly(y0,z0,x0, y1,z1,x1, y2,z2,x2, y3,z3,x3, 0,0, obj.w,0, obj.w,obj.h, 0,obj.h)
+    elseif SEC==2 then
+      obj.drawpoly(z0,y0,x0, z1,y1,x1, z2,y2,x2, z3,y3,x3, 0,0, obj.w,0, obj.w,obj.h, 0,obj.h)
+    else
+      obj.drawpoly(x0,y0,z0, x1,y1,z1, x2,y2,z2, x3,y3,z3, 0,0, obj.w,0, obj.w,obj.h, 0,obj.h)
+    end
+  end
+else --CHA<3
+
+  for i=0,Nmax do
+    obj.ox , obj.oy , obj.oz ,NL =PassXYZ(i/(NN*BN))
+    obj.draw()
+  end
+
 end
+
+-- ---------ここから違う
+
+
+  if APP==1 then
+  ocr_fdt={}
+    cw=obj.screen_w/80
+    for i=0,NN do
+  ocr_fdf={}
+      ix,iy,iz,it =PassXYZ(i/NN)
+      if SEC==1 then
+        table.insert(ocr_fd,{iy+cw,iz,ix+cw, iy+cw,iz,ix-cw, iy-cw,iz,ix-cw, iy-cw,iz,ix+cw,})
+        table.insert(ocr_fd,{iy,iz+cw,ix+cw, iy,iz+cw,ix-cw, iy,iz-cw,ix-cw, iy,iz-cw,ix+cw})
+        table.insert(ocr_fd,{iy+cw,iz+cw,ix, iy-cw,iz+cw,ix, iy-cw,iz-cw,ix, iy+cw,iz-cw,ix})
+      elseif SEC==2 then
+        table.insert(ocr_fd,{iz,iy+cw,ix+cw, iz,iy+cw,ix-cw, iz,iy-cw,ix-cw, iz,iy-cw,ix+cw})
+        table.insert(ocr_fd,{iz+cw,iy,ix+cw, iz+cw,iy,ix-cw, iz-cw,iy,ix-cw, iz-cw,iy,ix+cw})
+        table.insert(ocr_fd,{iz+cw,iy+cw,ix, iz+cw,iy-cw,ix, iz-cw,iy-cw,ix, iz-cw,iy+cw,ix})
+      else
+        table.insert(ocr_fd,{ix+cw,iy+cw,iz, ix-cw,iy+cw,iz, ix-cw,iy-cw,iz, ix+cw,iy-cw,iz})
+        table.insert(ocr_fd,{ix+cw,iy,iz+cw, ix-cw,iy,iz+cw, ix-cw,iy,iz-cw, ix+cw,iy,iz-cw})
+        table.insert(ocr_fd,{ix,iy+cw,iz+cw, ix,iy-cw,iz+cw, ix,iy-cw,iz-cw, ix,iy+cw,iz-cw})
+      end
+      if i==foc then
+        obj.load("figure","円",QCOL,100)
+ocr_filluvn(ocr_fdf,obj.w,obj.h)
+obj.drawpoly(ocr_fdf)
+      else
+        table.insert(ocr_fdt,ocr_fdf)
+      end
+    end -- i
+  if #ocr_fdt>0 then
+    ocr_fd={}
+    for k, v in ipairs(ocr_fdt) do
+	for kk, vv in ipairs(v) do
+		table.insert(ocr_fd,vv)
+	end
+    end
+        obj.load("figure","円",PCOL,100)
+ocr_filluvn(ocr_fd,obj.w,obj.h)
+obj.drawpoly(ocr_fd)
+  end
+ocr_fd={}
+      obj.load("figure","四角形",PCOL,100)
+    for i=1,NN do
+      ix0,iy0,iz0,it =PassXYZ((i-1)/NN)
+      ix1,iy1,iz1,it =PassXYZ(i/NN)
+      if SEC==1 then
+        table.insert(ocr_fd,{iy0,iz0,ix0+1, iy0,iz0,ix0-1, iy1,iz1,ix1-1, iy1,iz1,ix1+1})
+        table.insert(ocr_fd,{iy0+1,iz0,ix0, iy0-1,iz0,ix0, iy1-1,iz1,ix1, iy1+1,iz1,ix1})
+        table.insert(ocr_fd,{iy0,iz0+1,ix0, iy0,iz0-1,ix0, iy1,iz1-1,ix1, iy1,iz1+1,ix1})
+      elseif SEC==2 then
+        table.insert(ocr_fd,{iz0,iy0,ix0+1, iz0,iy0,ix0-1, iz1,iy1,ix1-1, iz1,iy1,ix1+1})
+        table.insert(ocr_fd,{iz0,iy0+1,ix0, iz0,iy0-1,ix0, iz1,iy1-1,ix1, iz1,iy1+1,ix1})
+        table.insert(ocr_fd,{iz0+1,iy0,ix0, iz0-1,iy0,ix0, iz1-1,iy1,ix1, iz1+1,iy1,ix1})
+      else
+        table.insert(ocr_fd,{ix0+1,iy0,iz0, ix0-1,iy0,iz0, ix1-1,iy1,iz1, ix1+1,iy1,iz1})
+        table.insert(ocr_fd,{ix0,iy0+1,iz0, ix0,iy0-1,iz0, ix1,iy1-1,iz1, ix1,iy1+1,iz1})
+        table.insert(ocr_fd,{ix0,iy0,iz0+1, ix0,iy0,iz0-1, ix1,iy1,iz1-1, ix1,iy1,iz1+1})
+      end
+    end -- i
+ocr_filluvn(ocr_fd,obj.w,obj.h)
+obj.drawpoly(ocr_fd)
+  end
